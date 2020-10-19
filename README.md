@@ -1,2 +1,2 @@
-Machine-Learning Stocks Predictor
+Random Forest Regression Stock Predictor
 ====
