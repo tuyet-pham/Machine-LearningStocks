@@ -1,1 +1,2 @@
-# Machine-LearningStocks
+Machine-Learning Stocks Predictor
+====
