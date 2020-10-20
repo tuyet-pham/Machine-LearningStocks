@@ -7,5 +7,5 @@ The main goal is to create a consistent and reliable algorithm that will give us
 
 
 ### Links
-[Google Collab](https://colab.research.google.com/drive/1Nzm7vwstY0j_CwJtCLeMV7NM8LPbKOg2?usp=sharing)
+[Google Collab](https://colab.research.google.com/drive/1Nzm7vwstY0j_CwJtCLeMV7NM8LPbKOg2?usp=sharing) <br>
 [S&P 500 Stock Dataset](https://www.kaggle.com/camnugent/sandp500)
