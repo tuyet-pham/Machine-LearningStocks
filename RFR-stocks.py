@@ -35,7 +35,7 @@ def train_dev(name):
     dev_stock = df[(df['date'] >= '2016-01-02') & (df['date'] <= '2019-01-01')]
     
     # Just Printing timer for extra coolness
-    print("\nStock good: %s\nUsing 2013-2015 for training and 2016-2018 for Dev.." %name)
+    print("\nStock good: %s\nUsing: \n2013-2015 for training... \n2016-2018 for Dev.." %name)
     # for i in tqdm.tqdm(range(200)):
     #     time.sleep(0.01)
 
