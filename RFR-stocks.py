@@ -119,14 +119,28 @@ if __name__ == "__main__":
 
     if(all_or_one == "n"):
         stock_name = pick_stock()
-        if(stock_name):
+        if(stock_name != ""):
             train_set, dev_set = train_dev(stock_name)
             print("\nTraining set\n",train_set,"\n\nDevset\n", dev_set)
             
             # !Important - This will create .csv file of each sets.
             train_dev_file(dev_set, train_set, stock_name)
-    
             
+            
+        
+        # Below does not all need to be done by next Thursday
+          # We need is to figure out what our milestones should be.
+          # Overall concepts
+          # How it ties all together
+          # GUI? 
+
+        # [Caleb] Figure out what features are significant
+          # use pearsons correlation (Machine Learning HW2)
+        
+        # Create random subset - 50% - 60%
+          # [Kyle]  1. Create many (e.g. 100) random sub-samples of our dataset with replacement.
+          # [Tuyet] 2. Train a Random Forest model on each sample.
+          # [Jon]   3. Given a new dataset, calculate the average prediction from each model.
     # else:
     #     train_all()
 
