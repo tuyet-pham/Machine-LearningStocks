@@ -28,7 +28,8 @@ def train_dev(name):
     Returns:
         [tuples]: train_stock, dev_stock
     """
-    df = pd.read_csv('data/individual_stocks_5yr/'+ name+ '_data.csv')
+    filepath = 'data/individual_stocks_5yr/' + name + '_data.csv'
+    df = pd.read_csv(filepath)
     
     # Getting within the time
     train_stock = df[(df['date'] >= '2012-12-31') & (df['date'] <= '2016-01-01')]
