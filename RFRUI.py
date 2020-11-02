@@ -6,7 +6,7 @@ from tkinter import TRUE, FALSE
 from tkinter import Toplevel, Message
 from tkinter import PanedWindow
 from tkinter import Text, Scrollbar
-from tkinter import PhotoImage, Menu, colorchooser, OptionMenu
+from tkinter import PhotoImage, Menu, colorchooser, OptionMenu, Canvas
 from tkinter.filedialog import askopenfilename
 
 
@@ -16,11 +16,17 @@ class RButtonDark(Button):
     def __init__(self, *args, **kwargs):
         Button.__init__(self, *args, **kwargs)
         self['relief'] = 'flat'
-        self['width'] = 10
+        
+        if kwargs.get('width',0) == 0:
+            self['width'] = 10
+        else:
+            self['width'] = kwargs.get('width',0)
+        
         if kwargs.get('height',0) == 0:
             self['height'] = 4
         else:
             self['height'] = kwargs.get('height',0)
+        
         self['bd'] = 0
         self['highlightthickness'] = 0
         self['activebackground'] = 'gray30'
@@ -39,6 +45,7 @@ class RButtonDark(Button):
             self['fg'] = kwargs.get('fg','')
 
 
+
 class RMenu(Menu):
     def __init__(self, *args, **kwargs):
         Menu.__init__(self, *args, **kwargs)
@@ -50,4 +57,19 @@ class RMenu(Menu):
         self['activeborderwidth'] = 0
         self['borderwidth'] = 0
     
-    
+
+class RLabel(Label):
+    def __init__(self, *args, **kwargs):
+        Label.__init__(self, *args, **kwargs)        
+        
+        if kwargs.get('bg', '') == '':
+            self['bg'] = 'gray13'
+        else:
+            self['bg'] = kwargs.get('bg', '')
+        
+        if kwargs.get('fg', '') == '':
+            self['fg'] = 'gray50'
+        else:
+            self['fg'] = kwargs.get('fg','')
+        
+        self['font'] = ('Helvetica', 18, "bold")

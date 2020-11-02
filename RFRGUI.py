@@ -12,22 +12,20 @@ from RFRUI import *
 
     
 # ----------- Important switch class for ALL frames ----------- #
+
 class Switch(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self.setdefault()
         self._frame = None
-        
-
         self.switch_frame(EntryMenu)
-        
     
 
     def switch_frame(self, frame_class):
-        # if(frame_class == EntryMenu):
-        #     self.buttonnav.configure(state=tk.DISABLED)
-        # else:
-        #     self.buttonnav.configure(state=tk.ENABLED)
+        if(frame_class == EntryMenu):
+            self.buttonnav.pack_forget()
+        else:
+            self.buttonnav.pack(side=LEFT, fill=BOTH)
             
         new_frame = frame_class(self)
         if self._frame is not None:
@@ -36,20 +34,17 @@ class Switch(tk.Tk):
         self._frame.pack(side=RIGHT, fill=BOTH, expand=TRUE)
  
     
-    
     def setdefault(self):
         self.title("Stock Prediction")
         self.geometry("700x500")
         self['bg'] = 'gray13'
         self.buttonnav = ButtonBar(self)
-        self.buttonnav.pack(side=LEFT, fill=BOTH)
+        
 
-    
-    
     def reset(self):
         frame = Toplevel(self, width=100, height=50)
-        frame['bg'] = "gray"
-        tk.Label(frame, text="Reset",fg='gray50', bg='gray13', font=('Helvetica', 18, "bold")).pack(side=TOP, fill="x", pady=10, padx=20)
+        frame['bg'] = self['bg']
+        RLabel(frame, text="Reset").pack(side=TOP, fill="x", pady=10, padx=20)
         frame.grab_set()
         
         
@@ -58,7 +53,7 @@ class ButtonBar(Frame):
     def __init__(self, master, *args, **kwargs):
         Frame.__init__(self, master, *args, **kwargs)
         self.rowat = 0
-        self['bg'] = 'gray27'
+        self['bg'] = master['bg']
         
         Button_frames = {"Choose Sets": StockPicker, "View Tables": Tables, "Adjustments": Adjustments, "Create Tree PNG": MakeTree, "Intro": MainMenu}
         for k, v in Button_frames.items():
@@ -83,9 +78,9 @@ class ButtonBar(Frame):
 class EntryMenu(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self['bg'] = 'gray13'
-        tk.Label(self, text="Stock Predictor V1.0", fg='gray50', bg='gray13', font=('Helvetica', 18, "bold")).pack(side=TOP, fill="x", pady=40)
-        RButtonDark(self, text="Enter", bg='MediumSlateBlue', fg='snow', height=4, command=lambda: master.switch_frame(MainMenu)).pack(side=TOP, fill="x", pady=40)
+        self['bg'] = master['bg']
+        RLabel(self, text="Stock Predictor V1.0").pack(side=TOP, fill="x",pady=10)
+        RButtonDark(self, width=20, text="Enter", bg='MediumSlateBlue', fg='snow', height=2, command=lambda: master.switch_frame(MainMenu)).pack(side=TOP, pady=10)
 
 
 
@@ -93,17 +88,23 @@ class EntryMenu(tk.Frame):
 class MainMenu(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self['bg'] = 'gray13'
-        tk.Label(self, text="Stock Predictor V1.0!",fg='gray50', bg='gray13', font=('Helvetica', 18, "bold")).pack(side=TOP, fill="x", pady=40)
+        self['bg'] = master['bg']
+        RLabel(self, text="Stock Predictor News\nand Update").pack(side=TOP, fill="x", pady=10)
+        RButtonDark(self, width=20, text="Close Project", bg='MediumSlateBlue', fg='snow', height=2, command=lambda: master.switch_frame(EntryMenu)).pack(side=TOP, pady=10)
         
+        
+
+       
         
 
 # ----------- About App ----------- #
 class StockPicker(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self['bg'] = 'gray13'
-        tk.Label(self, text="Stock Picker", bg='gray13', fg='gray50', font=('Helvetica', 18, "bold")).pack(side=TOP, fill="x", pady=40)
+        self['bg'] = master['bg']
+        RLabel(self, text="Chose full set from path").pack(side=LEFT, fill="x", pady=10)
+
+        
         
 
 
@@ -111,7 +112,7 @@ class StockPicker(tk.Frame):
 class About(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self['bg'] = 'gray13'
+        self['bg'] = master['bg']
 
         self.StockM = Text(self, height=15, width=53, relief='flat')
         self.StockM.config(state='disabled')
@@ -125,8 +126,8 @@ class About(tk.Frame):
 class Adjustments(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self['bg'] = 'gray13'
-        tk.Label(self, fg='gray50',text="Adjustments", bg='gray13', font=('Helvetica', 18, "bold")).pack(side=TOP, fill="x", pady=40)
+        self['bg'] = master['bg']
+        RLabel(self, text="Adjustments").pack(side=TOP, fill="x", pady=10)
         
         
 
@@ -135,8 +136,8 @@ class Adjustments(tk.Frame):
 class MakeTree(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self['bg'] = 'gray13'
-        tk.Label(self, text="Make Tree PNG", fg='gray50', bg='gray13', font=('Helvetica', 18, "bold")).pack(side=TOP, fill="x", pady=40)
+        self['bg'] = master['bg']
+        RLabel(self, text="Make Tree PNG").pack(side=TOP, fill="x", pady=10)
 
 
 
@@ -144,8 +145,8 @@ class MakeTree(tk.Frame):
 class Tables(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self['bg'] = 'gray13'
-        tk.Label(self, text="Tables", bg='gray13', fg='gray50', font=('Helvetica', 18, "bold")).pack(side=TOP, fill="x", pady=40)
+        self['bg'] = master['bg']
+        RLabel(self, text="Tables").pack(side=TOP, fill="x", pady=10)
 
 
 
