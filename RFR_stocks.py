@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn import tree
+from numpy import array
 import numpy as np
 import matplotlib as plot
 # import tqdm
@@ -45,7 +46,7 @@ def train_dev(stockname):
     """[summary]
         Getting a tuple from the file - train and dev set of a specific stock
     Args:
-        name (string): 
+        stockname (string):
     Returns:
         [tuples]: train_stock, dev_stock
     """
@@ -109,8 +110,20 @@ def pick_stock():
 
 
 
+def RandomForest(train_set, n_subset):
+    forest = []
+    for i in range(0, n_subset):
+        # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
+        n_tree = tree.DecisionTreeRegressor()
+        # n_tree.train( )
+        forest.add(n_tree)
+    return forest
+
+
 train_set = pd.DataFrame()
 dev_set = pd.DataFrame()
+
+
 
 if __name__ == "__main__":
     # Run to make life easier

@@ -4,3 +4,5 @@ data
 example.*
 *.pyc
 __pycache__
+.iml
+.xml
