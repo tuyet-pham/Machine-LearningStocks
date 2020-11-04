@@ -186,7 +186,7 @@ def custom_features(stock_input=None):
 
 
 def RandomForest(train_set, n_subset):
-    forest = []
+    forest = array()
     for i in range(0, n_subset):
         # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
         n_tree = tree.DecisionTreeRegressor()
