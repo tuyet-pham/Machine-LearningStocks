@@ -188,12 +188,29 @@ def custom_features(stock_input=None):
 def RandomForest(train_set, n_subset):
     forest = []
     for i in range(0, n_subset):
+        # for now
+        sub_set = train_set
         # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
-        n_tree = tree.DecisionTreeRegressor()
-        # n_tree.train( )
-        forest.add(n_tree)
+        sub_target = sub_set['target %']
+        sub_set = sub_set.drop(columns=['target %', 'Name'])
+        n_tree = tree.DecisionTreeRegressor(criterion='mse')
+        n_tree.fit(sub_set, sub_target)
+        forest.append(n_tree)
     return forest
 
+def MakePredictions(forest, set):
+    set = set.drop(columns=['target %', 'Name'])
+    pred_set = []
+    final_preds = []
+    for n_tree in forest:
+        pred_set.append(n_tree.predict(set))
+    pred_set_size = len(pred_set)
+    for i in range(0, len(pred_set[0])):
+        sum = 0
+        for pred in pred_set:
+            sum += pred[i]
+        final_preds.append(sum / pred_set_size)
+    return final_preds
 
 train_set = pd.DataFrame()
 dev_set = pd.DataFrame()
@@ -216,18 +233,14 @@ if __name__ == "__main__":
             # if using custom features, the fourth parameter should be true
             train_dev_file(dev_set, train_set, stock_name, True)
             tr = tree.DecisionTreeRegressor()
-            train_target = train_set['target %']
-            train_set = train_set.drop(columns=['target %', 'Name'])
+            '''train_target = train_set['target %']
+            train_set = train_set.drop(columns=['target %', 'Name'])'''
             dev_target = dev_set['target %']
-            dev_set = dev_set.drop(columns=['target %', 'Name'])
-            tr.fit(train_set, train_target)
-            preds = tr.predict(dev_set)
-            print("Predictions")
+            forest = RandomForest(train_set, 20)
+            preds = make_predictions(forest, dev_set)
             for i in range(0, len(preds)) :
                 print("pred: {}   actual: {}".format(preds[i], dev_target[i]))
             print()
-            print("DEV SCORE (1 is perfect): ", end="")
-            print(tr.score(dev_set, dev_target))
             x = 1
 
         # Below does not all need to be done by next Thursday
