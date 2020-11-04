@@ -127,12 +127,15 @@ def custom_features(stock_input=None):
     else:
         file_name = "data/individual_stocks_5yr/" + stock_input + "_data.csv"
     print(file_name)
+    
     stock_data = pd.read_csv(file_name, index_col="date")
     feature_names = ["target %", "close-open", "2 week movement", "Stochastic Oscillator", "Williams %R", "average"]
+    
     for item in stock_data.columns:
         if item != "date":
             feature_names.append(item)
     custom_features = pd.DataFrame(index=stock_data.index, columns=feature_names)
+    
     for i in stock_data.index:
         row = stock_data.loc[i]
         # print(dt.datetime.strptime(i, "%Y-%m-%d") - dt.datetime.strptime(stock_data.iloc[0].name, "%Y-%m-%d"))
@@ -198,6 +201,7 @@ def RandomForest(train_set, n_subset):
         forest.append(n_tree)
     return forest
 
+
 def MakePredictions(forest, set):
     set = set.drop(columns=['target %', 'Name'])
     pred_set = []
@@ -228,26 +232,23 @@ if __name__ == "__main__":
             custom = custom_features(stock_name)
             train_set, dev_set = train_dev(custom, dataframe=True)
             print("\nTraining set\n",train_set,"\n\nDevset\n", dev_set)
+            
             print(os.getcwd())
-            # !Important - This will create .csv file of each sets.
+             # !Important - This will create .csv file of each sets.
             # if using custom features, the fourth parameter should be true
             train_dev_file(dev_set, train_set, stock_name, True)
+            
             tr = tree.DecisionTreeRegressor()
             '''train_target = train_set['target %']
             train_set = train_set.drop(columns=['target %', 'Name'])'''
             dev_target = dev_set['target %']
+            
             forest = RandomForest(train_set, 20)
-            preds = make_predictions(forest, dev_set)
+            preds = MakePredictions(forest, dev_set)
             for i in range(0, len(preds)) :
                 print("pred: {}   actual: {}".format(preds[i], dev_target[i]))
             print()
             x = 1
-
-        # Below does not all need to be done by next Thursday
-          # We need is to figure out what our milestones should be.
-          # Overall concepts
-          # How it ties all together
-          # GUI? 
 
         # [Caleb] Figure out what features are significant
           # use pearsons correlation (Machine Learning HW2)
