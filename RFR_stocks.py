@@ -270,9 +270,9 @@ dev_set = pd.DataFrame()
 
 # FOR TUNING
 # unhelpful columns
-COLUMNS_TO_DROP = ['target %', 'Name']
+COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'high', 'low', 'close']
 # cutoff between buy, sell, hold
-CUTOFF = 1
+CUTOFF = 0.5
 
 if __name__ == "__main__":
     # Run to make life easier
