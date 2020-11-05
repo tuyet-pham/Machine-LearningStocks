@@ -229,7 +229,7 @@ def GetMSE(preds, target):
 def GenerateLabels(data):
     labels = []
     for d in data:
-        labels.append("sell" if d < -1 else "buy " if d > 1 else "hold")
+        labels.append("sell" if d < -0.75 else "buy " if d > 0.75 else "hold")
     return labels
 
 def NumericalLabelScore(data):
@@ -237,6 +237,15 @@ def NumericalLabelScore(data):
     for i in range(0, len(data)):
         results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
     return results
+
+def LabeledMSE(preds, target):
+    return GetMSE(NumericalLabelScore(preds), NumericalLabelScore(target))
+
+def Baseline(labeled_target):
+    bline = []
+    for dat in labeled_target:
+        bline.append("hold")
+    return LabeledMSE(bline, labeled_target)
 
 train_set = pd.DataFrame()
 dev_set = pd.DataFrame()
@@ -273,8 +282,9 @@ if __name__ == "__main__":
             print("MSE: ", end="")
             print(GetMSE(preds, dev_target))
             print("MSE for labeled data: ", end="")
-            print(GetMSE(NumericalLabelScore(preds_labels), NumericalLabelScore(dev_target_labels)))
-            x = 1
+            print(LabeledMSE(preds_labels, dev_target_labels))
+            print("Baseline for labeled data: ", end="")
+            print(Baseline(dev_target_labels))
 
         # [Caleb] Figure out what features are significant
           # use pearsons correlation (Machine Learning HW2)
