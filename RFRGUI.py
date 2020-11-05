@@ -6,11 +6,7 @@ import matplotlib as plot
 from RFRUI import *
 # from RFR_stocks import pick_stock
 
-# tk.Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
-# filename = askopenfilename() # show an "Open" dialog box and return the path to the selected file
-# print(filename)
 
-    
 # ----------- Important switch class for ALL frames ----------- #
 
 class Switch(tk.Tk):
@@ -36,7 +32,7 @@ class Switch(tk.Tk):
     
     def setdefault(self):
         self.title("Stock Prediction")
-        self.geometry("700x500")
+        self.geometry("1200x900")
         self['bg'] = 'gray13'
         self.buttonnav = ButtonBar(self)
         
@@ -53,15 +49,14 @@ class ButtonBar(Frame):
     def __init__(self, master, *args, **kwargs):
         Frame.__init__(self, master, *args, **kwargs)
         self.rowat = 0
-        self['bg'] = master['bg']
+        self['bg'] = 'gray27'
         
-        Button_frames = {"Choose Sets": StockPicker, "View Tables": Tables, "Adjustments": Adjustments, "Create Tree PNG": MakeTree, "Intro": MainMenu}
+        Button_frames = {"Main": MainMenu, "Choose Sets": StockPicker, "View Tables": Tables, "Adjustments": Adjustments, "Create Tree PNG": MakeTree}
         for k, v in Button_frames.items():
             self.add_buttons(1, master, k, v)
             
         self.add_buttons(2, master, test_lable="Quit", frame_call=quit)
 
-        
     
     def add_buttons(self, typebutton, master, test_lable, frame_call):
         if typebutton == 1:
@@ -79,8 +74,8 @@ class EntryMenu(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
         self['bg'] = master['bg']
-        RLabel(self, text="Stock Predictor V1.0").pack(side=TOP, fill="x",pady=10)
-        RButtonDark(self, width=20, text="Enter", bg='MediumSlateBlue', fg='snow', height=2, command=lambda: master.switch_frame(MainMenu)).pack(side=TOP, pady=10)
+        RLabel(self, text="Stock Predictor").pack(fill=BOTH, expand=TRUE)
+        RButtonDark(self, width=20, text="Start Project", bg='MediumSlateBlue', fg='snow', height=2, command=lambda: master.switch_frame(MainMenu)).pack(side=BOTTOM, pady=50, padx=50, anchor='se')
 
 
 
@@ -91,23 +86,52 @@ class MainMenu(tk.Frame):
         self['bg'] = master['bg']
         RLabel(self, text="Stock Predictor News\nand Update").pack(side=TOP, fill="x", pady=10)
         RButtonDark(self, width=20, text="Close Project", bg='MediumSlateBlue', fg='snow', height=2, command=lambda: master.switch_frame(EntryMenu)).pack(side=TOP, pady=10)
-        
+       
         
 
        
         
 
 # ----------- About App ----------- #
-class StockPicker(tk.Frame):
+class StockPicker(Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
         self['bg'] = master['bg']
-        RLabel(self, text="Chose full set from path").pack(side=LEFT, fill="x", pady=10)
+        self.filename=""
+        RLabel(self, fg='gray70', text="Choose Sets").grid(row=0, column=0, columnspan=4, pady=15, padx=15, sticky=W)
+
+        self.setdefault()
+
+    
+    def chosestock(self, stype):
+        self.filename = askopenfilename() # show an "Open" dialog box and return the path to the selected file 
+        if stype == 1:
+            self.entrytrain.delete(0,'end')
+            self.entrytrain.insert(0, self.filename)
+        if stype == 2:
+            self.entrydev.delete(0,'end')
+            self.entrydev.insert(0, self.filename)
+        
+    
+    def setdefault(self):
+        RLabel(self, font=('Helvetica', 11, "normal"), text="Does your set require splitting?").grid(row=1, column=0, columnspan=3, padx=15, sticky=W)
+
+        v = tk.IntVar()
+        RRadiobutton(self, text="Splitting required", variable=v, value=1).grid(row=2, column=0, columnspan=2, pady=5, padx=15, sticky=W)
+        RRadiobutton(self, text="Splitting not required", variable=v, value=2).grid(row=2, column=2, columnspan=4, pady=5, sticky=W) 
 
         
+        RLabel(self, font=('Helvetica', 11, "normal"), text="Training set").grid(row=3, column=0, columnspan=2, padx=15, sticky=W)
+        RButtonDark(self, width=15, text="Browse", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.chosestock(1)).grid(row=4, column=2, columnspan=4, pady=5, sticky=E)
+        self.entrytrain = REntry(self, width=45)
+        self.entrytrain.grid(row=4, column=0, ipady=3, columnspan=2, pady=5, padx=15, sticky=W)
         
-
-
+        RLabel(self, font=('Helvetica', 11, "normal"), text="Developement set").grid(row=5, column=0, columnspan=2, padx=15, sticky=W)
+        RButtonDark(self, width=15, text="Browse", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.chosestock(2)).grid(row=6, column=2, columnspan=4, pady=5, sticky=E)
+        self.entrydev = REntry(self, width=45)
+        self.entrydev.grid(row=6, column=0, ipady=3, columnspan=2, pady=5, padx=15, sticky=W)
+        
+        
 # ----------- About App ----------- #
 class About(tk.Frame):
     def __init__(self, master):
@@ -119,8 +143,6 @@ class About(tk.Frame):
         self.StockM.pack(side=TOP, fill=Y, pady=20)
         
         
-
-
 
 # ----------- About App ----------- #
 class Adjustments(tk.Frame):

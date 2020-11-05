@@ -1,13 +1,13 @@
 import tkinter as tk
 from tkinter import Label, Entry
 from tkinter import Frame, Button, Grid
-from tkinter import TOP, LEFT, RIGHT, BOTTOM, Y, BOTH, END, N, W, E, S, DISABLED
+from tkinter import TOP, LEFT, RIGHT, BOTTOM, Y, BOTH, END, N, W, E, S, DISABLED, CENTER
 from tkinter import TRUE, FALSE
 from tkinter import Toplevel, Message
 from tkinter import PanedWindow
 from tkinter import Text, Scrollbar
 from tkinter import PhotoImage, Menu, colorchooser, OptionMenu, Canvas
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, Radiobutton, LabelFrame
 
 
 
@@ -18,12 +18,12 @@ class RButtonDark(Button):
         self['relief'] = 'flat'
         
         if kwargs.get('width',0) == 0:
-            self['width'] = 10
+            self['width'] = 14
         else:
             self['width'] = kwargs.get('width',0)
         
         if kwargs.get('height',0) == 0:
-            self['height'] = 4
+            self['height'] = 5
         else:
             self['height'] = kwargs.get('height',0)
         
@@ -71,5 +71,71 @@ class RLabel(Label):
             self['fg'] = 'gray50'
         else:
             self['fg'] = kwargs.get('fg','')
+
+        if kwargs.get('font', '') == '':
+            self['font'] = ('Helvetica', 18, "bold")
+        else:
+            self['font'] = kwargs.get('font','')
         
-        self['font'] = ('Helvetica', 18, "bold")
+        
+
+class REntry(Entry):
+    def __init__(self, *args, **kwargs):
+        Entry.__init__(self, *args, **kwargs)        
+        
+        self['bd'] = 0
+        self['highlightthickness'] = 0
+        self['relief'] ='flat'
+        self['selectbackground'] = 'gray30'
+        
+        if kwargs.get('bg', '') == '':
+            self['bg'] = 'gray20'
+        else:
+            self['bg'] = kwargs.get('bg', '')
+        
+        if kwargs.get('fg', '') == '':
+            self['fg'] = 'gray40'
+        else:
+            self['fg'] = kwargs.get('fg','')
+
+        if kwargs.get('font', '') == '':
+            self['font'] = ('Helvetica', 11, "normal")
+        else:
+            self['font'] = kwargs.get('font','')
+        
+        if kwargs.get('width',0) == 0:
+            self['width'] = 10
+        else:
+            self['width'] = kwargs.get('width',0)
+    
+
+
+class RRadiobutton(Radiobutton):
+    def __init__(self, *args, **kwargs):
+        Radiobutton.__init__(self, *args, **kwargs)        
+        
+        self['bd'] = 0
+        self['highlightthickness'] = 0
+        self['relief'] ='flat'
+        
+        if kwargs.get('bg', '') == '':
+            self['bg'] = 'gray13'
+            self['activebackground'] = self['bg']
+        else:
+            self['bg'] = kwargs.get('bg', '')
+            self['activebackground'] = self['bg']
+        
+        self['activeforeground'] = 'MediumSlateBlue'
+
+
+        if kwargs.get('fg', '') == '':
+            self['fg'] = 'gray45'
+        else:
+            self['fg'] = kwargs.get('fg','')
+
+        if kwargs.get('font', '') == '':
+            self['font'] = ('Helvetica', 11, "normal")
+        else:
+            self['font'] = kwargs.get('font','')
+        
+    
