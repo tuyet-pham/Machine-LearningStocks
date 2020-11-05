@@ -192,7 +192,7 @@ def RandomForest(train_sets):
         # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
         sub_target = sub_set['target %']
         sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
-        n_tree = tree.DecisionTreeRegressor(criterion='mse', min_samples_leaf=10)
+        n_tree = tree.DecisionTreeRegressor(criterion='mse', min_samples_leaf=20)
         n_tree.fit(sub_set, sub_target)
         forest.append(n_tree)
     return forest
@@ -235,8 +235,8 @@ def GetMSE(preds, target):
 
 def GenerateLabels(data):
     labels = []
-    high = 1
-    low = -1
+    high = CUTOFF
+    low = -CUTOFF
     for d in data:
         labels.append("sell" if d < low else "buy " if d > high else "hold")
     return labels
@@ -268,8 +268,11 @@ def Baseline(target):
 train_set = pd.DataFrame()
 dev_set = pd.DataFrame()
 
-# for tuning
+# FOR TUNING
+# unhelpful columns
 COLUMNS_TO_DROP = ['target %', 'Name']
+# cutoff between buy, sell, hold
+CUTOFF = 1
 
 if __name__ == "__main__":
     # Run to make life easier
@@ -288,8 +291,7 @@ if __name__ == "__main__":
             except:
                 custom = custom_features(stock_name)
                 train_set, dev_set = train_dev(custom, dataframe=True)
-            print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
-            random_subsets = RandomSubsets(train_set, 20, 0.5)
+            #print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
             # !Important - This will create .csv file of each sets.
             # if using custom features, the fourth parameter should be true
             train_dev_file(dev_set, train_set, stock_name, True)
@@ -299,6 +301,7 @@ if __name__ == "__main__":
             train_set = train_set.drop(columns=['target %', 'Name'])'''
             dev_target = dev_set['target %']
 
+            random_subsets = RandomSubsets(train_set, 20, 0.5)
             forest = RandomForest(random_subsets)
             preds = MakePredictions(forest, dev_set)
             preds_labels = GenerateLabels(preds)
