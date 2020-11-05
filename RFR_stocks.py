@@ -131,9 +131,9 @@ def custom_features(stock_input=None):
     stock_data = pd.read_csv(file_name, index_col="date")
     feature_names = ["target %", "close-open", "2 week movement", "Stochastic Oscillator", "Williams %R", "average"]
     
-    for item in stock_data.columns:
+    '''for item in stock_data.columns:
         if item != "date":
-            feature_names.append(item)
+            feature_names.append(item)'''
     custom_features = pd.DataFrame(index=stock_data.index, columns=feature_names)
     
     for i in stock_data.index:
@@ -142,8 +142,9 @@ def custom_features(stock_input=None):
         average = (row['high'] + row['low']) / 2
         custom_features.loc[i]['average'] = average
         today = dt.datetime.strptime(i, "%Y-%m-%d")
-        for col in stock_data.columns:
-            custom_features.loc[i][col] = row[col]
+        '''for col in stock_data.columns:
+            custom_features.loc[i][col] = row[col]'''
+        custom_features.loc[i]["volume"] = row["volume"]
         if (today - dt.datetime.strptime(stock_data.iloc[0].name, "%Y-%m-%d")).days < 14:
             prev_loc = i
             continue
@@ -189,13 +190,13 @@ def custom_features(stock_input=None):
 
 
 def RandomForest(train_set, n_subset):
-    forest = array()
+    forest = []
     for i in range(0, n_subset):
         # for now
         sub_set = train_set
         # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
         sub_target = sub_set['target %']
-        sub_set = sub_set.drop(columns=['target %', 'Name'])
+        sub_set = sub_set.drop(columns=['target %'])
         n_tree = tree.DecisionTreeRegressor(criterion='mse')
         n_tree.fit(sub_set, sub_target)
         forest.append(n_tree)
@@ -203,7 +204,7 @@ def RandomForest(train_set, n_subset):
 
 
 def MakePredictions(forest, set):
-    set = set.drop(columns=['target %', 'Name'])
+    set = set.drop(columns=['target %'])
     pred_set = []
     final_preds = []
     for n_tree in forest:
@@ -215,6 +216,27 @@ def MakePredictions(forest, set):
             sum += pred[i]
         final_preds.append(sum / pred_set_size)
     return final_preds
+
+def GetMSE(preds, target):
+    sum = 0
+    n = len(preds)
+    if n != len(target):
+        return
+    for i in range(0, n):
+        sum += (preds[i] - target[i]) ** 2
+    return float(sum / n)
+
+def GenerateLabels(data):
+    labels = []
+    for d in data:
+        labels.append("sell" if d < -1 else "buy " if d > 1 else "hold")
+    return labels
+
+def NumericalLabelScore(data):
+    results = []
+    for i in range(0, len(data)):
+        results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
+    return results
 
 train_set = pd.DataFrame()
 dev_set = pd.DataFrame()
@@ -231,23 +253,27 @@ if __name__ == "__main__":
         if(stock_name != ""):
             custom = custom_features(stock_name)
             train_set, dev_set = train_dev(custom, dataframe=True)
-            print("\nTraining set\n",train_set,"\n\nDevset\n", dev_set)
+            print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
             
             print(os.getcwd())
              # !Important - This will create .csv file of each sets.
             # if using custom features, the fourth parameter should be true
             train_dev_file(dev_set, train_set, stock_name, True)
             
-            tr = tree.DecisionTreeRegressor()
             '''train_target = train_set['target %']
             train_set = train_set.drop(columns=['target %', 'Name'])'''
             dev_target = dev_set['target %']
             
             forest = RandomForest(train_set, 20)
             preds = MakePredictions(forest, dev_set)
+            preds_labels = GenerateLabels(preds)
+            dev_target_labels = GenerateLabels(dev_target)
             for i in range(0, len(preds)) :
                 print("pred: {}   actual: {}".format(preds[i], dev_target[i]))
-            print()
+            print("MSE: ", end="")
+            print(GetMSE(preds, dev_target))
+            print("MSE for labeled data: ", end="")
+            print(GetMSE(NumericalLabelScore(preds_labels), NumericalLabelScore(dev_target_labels)))
             x = 1
 
         # [Caleb] Figure out what features are significant
