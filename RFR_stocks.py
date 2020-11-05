@@ -129,11 +129,12 @@ def custom_features(stock_input=None):
     print(file_name)
     
     stock_data = pd.read_csv(file_name, index_col="date")
-    feature_names = ["target %", "close-open", "2 week movement", "Stochastic Oscillator", "Williams %R", "average"]
+    feature_names = ["target %", "close-open %", "2 week movement", "Stochastic Oscillator", "Williams %R", "average"]
     
-    '''for item in stock_data.columns:
+    for item in stock_data.columns:
         if item != "date":
-            feature_names.append(item)'''
+            feature_names.append(item)
+    #feature_names.append("volume")
     custom_features = pd.DataFrame(index=stock_data.index, columns=feature_names)
     
     for i in stock_data.index:
@@ -142,13 +143,13 @@ def custom_features(stock_input=None):
         average = (row['high'] + row['low']) / 2
         custom_features.loc[i]['average'] = average
         today = dt.datetime.strptime(i, "%Y-%m-%d")
-        '''for col in stock_data.columns:
-            custom_features.loc[i][col] = row[col]'''
+        for col in stock_data.columns:
+            custom_features.loc[i][col] = row[col]
         custom_features.loc[i]["volume"] = row["volume"]
         if (today - dt.datetime.strptime(stock_data.iloc[0].name, "%Y-%m-%d")).days < 14:
             prev_loc = i
             continue
-        close_open = row['close'] - row['open']
+        close_open = (row['close'] - row['open']) * 100.0 / row['open']
         average = (row['high'] + row['low']) / 2
         fourteen_days_ago = today - dt.timedelta(days=14)
         fourteen_days_ago = fourteen_days_ago.isoformat().split('T')[0]
@@ -174,7 +175,7 @@ def custom_features(stock_input=None):
         williams = -100 * float(
             (max(last_two_weeks['high']) - row['close']) / (max(last_two_weeks['high']) - min(last_two_weeks['low'])))
         # feature_names = ["close-open", "2 week movement", "Stochastic Oscillator", "Williams %R","average"]
-        custom_features.loc[i]["close-open"] = close_open
+        custom_features.loc[i]["close-open %"] = close_open
         custom_features.loc[i]["2 week movement"] = two_week_change
         custom_features.loc[i]["Stochastic Oscillator"] = stochastic
         custom_features.loc[i]["Williams %R"] = williams
@@ -196,15 +197,15 @@ def RandomForest(train_set, n_subset):
         sub_set = train_set
         # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
         sub_target = sub_set['target %']
-        sub_set = sub_set.drop(columns=['target %'])
-        n_tree = tree.DecisionTreeRegressor(criterion='mse')
+        sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
+        n_tree = tree.DecisionTreeRegressor(criterion='mse', min_samples_leaf=10)
         n_tree.fit(sub_set, sub_target)
         forest.append(n_tree)
     return forest
 
 
 def MakePredictions(forest, set):
-    set = set.drop(columns=['target %'])
+    set = set.drop(columns=COLUMNS_TO_DROP)
     pred_set = []
     final_preds = []
     for n_tree in forest:
@@ -238,10 +239,25 @@ def NumericalLabelScore(data):
         results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
     return results
 
+def LabeledMSE(preds, target):
+    return GetMSE(NumericalLabelScore(preds), NumericalLabelScore(target))
+
+def Baseline(target):
+    baseline = []
+    for dat in target:
+        if type(dat) == str:
+            baseline.append("hold")
+        else:
+            baseline.append(0)
+    if type(baseline[0]) == int:
+        return GetMSE(baseline, target)
+    return LabeledMSE(baseline, target)
+
 train_set = pd.DataFrame()
 dev_set = pd.DataFrame()
 
-
+# for tuning
+COLUMNS_TO_DROP = ['target %', 'Name']
 
 if __name__ == "__main__":
     # Run to make life easier
@@ -270,11 +286,14 @@ if __name__ == "__main__":
             dev_target_labels = GenerateLabels(dev_target)
             for i in range(0, len(preds)) :
                 print("pred: {}   actual: {}".format(preds[i], dev_target[i]))
-            print("MSE: ", end="")
+            print("Unlabeled MSE: ", end="")
             print(GetMSE(preds, dev_target))
-            print("MSE for labeled data: ", end="")
-            print(GetMSE(NumericalLabelScore(preds_labels), NumericalLabelScore(dev_target_labels)))
-            x = 1
+            print("Unlabeled baseline: ", end="")
+            print(Baseline(dev_target))
+            print("Labeled MSE: ", end="")
+            print(LabeledMSE(preds_labels, dev_target_labels))
+            print("Labeled baseline:  ", end="")
+            print(Baseline(dev_target_labels))
 
         # [Caleb] Figure out what features are significant
           # use pearsons correlation (Machine Learning HW2)
