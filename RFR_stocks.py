@@ -122,7 +122,7 @@ def custom_features(stock_input=None):
     print(file_name)
 
     stock_data = pd.read_csv(file_name, index_col="date")
-    feature_names = ["target %", "close-open %", "2 week movement", "Stochastic Oscillator", "Williams %R", "average", "volatility"]
+    feature_names = ["target %", "close-open %", "2 week movement", "1 week movement", "Stochastic Oscillator", "Williams %R", "average", "volatility 2w", "volatility 1w"]
 
     for item in stock_data.columns:
         if item != "date":
@@ -161,8 +161,14 @@ def custom_features(stock_input=None):
                 except:
                     fourteen_days_ago = today - dt.timedelta(days=11)
                     fourteen_days_ago = fourteen_days_ago.isoformat().split('T')[0]
-        two_week_change = average - custom_features.loc[fourteen_days_ago]['average']
+        two_week_change = (average - custom_features.loc[fourteen_days_ago]['average'])
+        two_week_change *= (100.0 / custom_features.loc[fourteen_days_ago]['average'])
         last_two_weeks = custom_features.loc[fourteen_days_ago:i]
+        one_week_ago = last_two_weeks.index[int(len(last_two_weeks) / 2)]
+        last_week = last_two_weeks.loc[one_week_ago:]
+        week_change = average - last_two_weeks.loc[one_week_ago]['average']
+        week_change *= (100.0 / last_two_weeks.loc[one_week_ago]['average'])
+
         stochastic = 100 * float(
             (row['close'] - min(last_two_weeks['low'])) / (max(last_two_weeks['high']) - min(last_two_weeks['low'])))
         williams = -100 * float(
@@ -170,9 +176,12 @@ def custom_features(stock_input=None):
         # feature_names = ["close-open", "2 week movement", "Stochastic Oscillator", "Williams %R","average"]
         custom_features.loc[i]["close-open %"] = close_open
         custom_features.loc[i]["2 week movement"] = two_week_change
+        custom_features.loc[i]["1 week movement"] = week_change
+
         custom_features.loc[i]["Stochastic Oscillator"] = stochastic
         custom_features.loc[i]["Williams %R"] = williams
-        custom_features.loc[i]["volatility"] = statistics.stdev(last_two_weeks['average'])
+        custom_features.loc[i]["volatility 2w"] = statistics.stdev(last_two_weeks['average'])
+        custom_features.loc[i]["volatility 1w"] = statistics.stdev(last_week['average'])
         target = average - custom_features.loc[prev_loc]['average']
         target = 100 * target / custom_features.loc[prev_loc]['average']
         custom_features.loc[prev_loc]["target %"] = target
@@ -186,13 +195,13 @@ def custom_features(stock_input=None):
 
 def RandomForest(train_sets):
     forest = []
+    random.seed(dt.datetime.now().microsecond)
     for i in range(0, len(train_sets)):
-        # for now
         sub_set = train_sets[i]
-        # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
         sub_target = sub_set['target %']
         sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
-        n_tree = tree.DecisionTreeRegressor(criterion='mse', min_samples_leaf=20)
+        rand_num = random.randint(0, 99999999)
+        n_tree = tree.DecisionTreeClassifier(random_state=rand_num, min_samples_leaf=3, max_depth=4, max_leaf_nodes=20, criterion='entropy', splitter='random')
         n_tree.fit(sub_set, sub_target)
         forest.append(n_tree)
     return forest
@@ -204,12 +213,18 @@ def MakePredictions(forest, set):
     final_preds = []
     for n_tree in forest:
         pred_set.append(n_tree.predict(set))
-    pred_set_size = len(pred_set)
     for i in range(0, len(pred_set[0])):
-        sum = 0
+        votes = {"hold": 0}
         for pred in pred_set:
-            sum += pred[i]
-        final_preds.append(sum / pred_set_size)
+            if pred[i] not in votes:
+                votes[pred[i]] = 1
+            else:
+                votes[pred[i]] += 1
+        mode = ["hold", votes["hold"]]
+        for v in votes:
+            if votes[v] > mode[1]:
+                mode = [v, votes[v]]
+        final_preds.append(mode[0])
     return final_preds
 
 
@@ -245,7 +260,7 @@ def GenerateLabels(data):
 def NumericalLabelScore(data):
     results = []
     for i in range(0, len(data)):
-        results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
+        results.append(1 if data[i] == "buy" else 0 if data[i] == "hold" else -1)
     return results
 
 
@@ -270,7 +285,7 @@ dev_set = pd.DataFrame()
 
 # FOR TUNING
 # unhelpful columns
-COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'high', 'low', 'close']
+COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'low', 'close', 'high', 'average']
 # cutoff between buy, sell, hold
 CUTOFF = 0.75
 
@@ -296,26 +311,21 @@ if __name__ == "__main__":
             # if using custom features, the fourth parameter should be true
             train_dev_file(dev_set, train_set, stock_name, True)
 
+            # replacing target data with labels
+            train_set['target %'] = GenerateLabels(train_set['target %'])
+            dev_set['target %'] = GenerateLabels(dev_set['target %'])
 
-            '''train_target = train_set['target %']
-            train_set = train_set.drop(columns=['target %', 'Name'])'''
             dev_target = dev_set['target %']
 
-            random_subsets = RandomSubsets(train_set, 20, 0.5)
+            random_subsets = RandomSubsets(train_set, 40, 0.4)
             forest = RandomForest(random_subsets)
-            preds = MakePredictions(forest, dev_set)
-            preds_labels = GenerateLabels(preds)
-            dev_target_labels = GenerateLabels(dev_target)
-            for i in range(0, len(preds)):
-                print("pred: {}   actual: {}".format(preds[i], dev_target[i]))
-            print("Unlabeled MSE: ", end="")
-            print(GetMSE(preds, dev_target))
-            print("Unlabeled baseline: ", end="")
-            print(Baseline(dev_target))
+            dev_preds = MakePredictions(forest, dev_set)
+            for i in range(0, len(dev_preds)):
+                print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
             print("Labeled MSE: ", end="")
-            print(LabeledMSE(preds_labels, dev_target_labels))
+            print(LabeledMSE(dev_preds, dev_target))
             print("Labeled baseline:  ", end="")
-            print(Baseline(dev_target_labels))
+            print(Baseline(dev_target))
 
         # [Caleb] Figure out what features are significant
         # use pearsons correlation (Machine Learning HW2)
