@@ -8,6 +8,7 @@ import datetime as dt
 import time
 import os
 import random
+import statistics
 
 pd.options.display.max_rows = 10
 
@@ -25,7 +26,6 @@ file1.writelines("Name\n")
 for e in alst:
     file1.writelines(e + "\n")
 file1.close()
-
 
 def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
     # for i in tqdm.tqdm(range(200)):
@@ -111,7 +111,6 @@ def pick_stock():
 
     return ""
 
-
 def custom_features(stock_input=None):
     # build custom_features dataframe for a single stock
 
@@ -123,7 +122,7 @@ def custom_features(stock_input=None):
     print(file_name)
 
     stock_data = pd.read_csv(file_name, index_col="date")
-    feature_names = ["target %", "close-open %", "2 week movement", "Stochastic Oscillator", "Williams %R", "average"]
+    feature_names = ["target %", "close-open %", "2 week movement", "Stochastic Oscillator", "Williams %R", "average", "volatility"]
 
     for item in stock_data.columns:
         if item != "date":
@@ -163,7 +162,7 @@ def custom_features(stock_input=None):
                     fourteen_days_ago = today - dt.timedelta(days=11)
                     fourteen_days_ago = fourteen_days_ago.isoformat().split('T')[0]
         two_week_change = average - custom_features.loc[fourteen_days_ago]['average']
-        last_two_weeks = stock_data.loc[fourteen_days_ago:i]
+        last_two_weeks = custom_features.loc[fourteen_days_ago:i]
         stochastic = 100 * float(
             (row['close'] - min(last_two_weeks['low'])) / (max(last_two_weeks['high']) - min(last_two_weeks['low'])))
         williams = -100 * float(
@@ -173,6 +172,7 @@ def custom_features(stock_input=None):
         custom_features.loc[i]["2 week movement"] = two_week_change
         custom_features.loc[i]["Stochastic Oscillator"] = stochastic
         custom_features.loc[i]["Williams %R"] = williams
+        custom_features.loc[i]["volatility"] = statistics.stdev(last_two_weeks['average'])
         target = average - custom_features.loc[prev_loc]['average']
         target = 100 * target / custom_features.loc[prev_loc]['average']
         custom_features.loc[prev_loc]["target %"] = target
@@ -272,7 +272,7 @@ dev_set = pd.DataFrame()
 # unhelpful columns
 COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'high', 'low', 'close']
 # cutoff between buy, sell, hold
-CUTOFF = 0.5
+CUTOFF = 0.75
 
 if __name__ == "__main__":
     # Run to make life easier
