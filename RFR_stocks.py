@@ -192,7 +192,7 @@ def RandomForest(train_sets):
         # sub_set = Bagging_here(train_set) - Kyle <--- best_features = featureselection(train_set) # Caleb
         sub_target = sub_set['target %']
         sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
-        n_tree = tree.DecisionTreeRegressor(criterion='mse', min_samples_leaf=20)
+        n_tree = tree.DecisionTreeClassifier(max_depth=4, max_leaf_nodes=20)
         n_tree.fit(sub_set, sub_target)
         forest.append(n_tree)
     return forest
@@ -204,12 +204,18 @@ def MakePredictions(forest, set):
     final_preds = []
     for n_tree in forest:
         pred_set.append(n_tree.predict(set))
-    pred_set_size = len(pred_set)
     for i in range(0, len(pred_set[0])):
-        sum = 0
+        votes = {"hold": 0}
         for pred in pred_set:
-            sum += pred[i]
-        final_preds.append(sum / pred_set_size)
+            if pred[i] not in votes:
+                votes[pred[i]] = 1
+            else:
+                votes[pred[i]] += 1
+        mode = ["hold", votes["hold"]]
+        for v in votes:
+            if votes[v] > mode[1]:
+                mode = [v, votes[v]]
+        final_preds.append(mode[0])
     return final_preds
 
 
@@ -245,7 +251,7 @@ def GenerateLabels(data):
 def NumericalLabelScore(data):
     results = []
     for i in range(0, len(data)):
-        results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
+        results.append(1 if data[i] == "buy" else 0 if data[i] == "hold" else -1)
     return results
 
 
@@ -270,9 +276,9 @@ dev_set = pd.DataFrame()
 
 # FOR TUNING
 # unhelpful columns
-COLUMNS_TO_DROP = ['target %', 'Name']
+COLUMNS_TO_DROP = ['target %', 'Name', 'open','low','close','open','average']
 # cutoff between buy, sell, hold
-CUTOFF = 1
+CUTOFF = 0.75
 
 if __name__ == "__main__":
     # Run to make life easier
@@ -296,26 +302,21 @@ if __name__ == "__main__":
             # if using custom features, the fourth parameter should be true
             train_dev_file(dev_set, train_set, stock_name, True)
 
+            # replacing target data with labels
+            train_set['target %'] = GenerateLabels(train_set['target %'])
+            dev_set['target %'] = GenerateLabels(dev_set['target %'])
 
-            '''train_target = train_set['target %']
-            train_set = train_set.drop(columns=['target %', 'Name'])'''
             dev_target = dev_set['target %']
 
-            random_subsets = RandomSubsets(train_set, 20, 0.5)
+            random_subsets = RandomSubsets(train_set, 40, 0.4)
             forest = RandomForest(random_subsets)
-            preds = MakePredictions(forest, dev_set)
-            preds_labels = GenerateLabels(preds)
-            dev_target_labels = GenerateLabels(dev_target)
-            for i in range(0, len(preds)):
-                print("pred: {}   actual: {}".format(preds[i], dev_target[i]))
-            print("Unlabeled MSE: ", end="")
-            print(GetMSE(preds, dev_target))
-            print("Unlabeled baseline: ", end="")
-            print(Baseline(dev_target))
+            dev_preds = MakePredictions(forest, dev_set)
+            for i in range(0, len(dev_preds)):
+                print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
             print("Labeled MSE: ", end="")
-            print(LabeledMSE(preds_labels, dev_target_labels))
+            print(LabeledMSE(dev_preds, dev_target))
             print("Labeled baseline:  ", end="")
-            print(Baseline(dev_target_labels))
+            print(Baseline(dev_target))
 
         # [Caleb] Figure out what features are significant
         # use pearsons correlation (Machine Learning HW2)
