@@ -27,7 +27,6 @@ for e in alst:
     file1.writelines(e + "\n")
 file1.close()
 
-
 def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
     # for i in tqdm.tqdm(range(200)):
     #     time.sleep(0.01)
@@ -111,7 +110,6 @@ def pick_stock():
         print("Can't find %s Try again?" % stkname)
 
     return ""
-
 
 def custom_features(stock_input=None):
     # build custom_features dataframe for a single stock
