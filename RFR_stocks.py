@@ -9,8 +9,11 @@ import time
 import os
 import random
 import statistics
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn import linear_model, tree, ensemble
 
-pd.options.display.max_rows = 10
+pd.options.display.max_rows=20
+
 
 # To get the list of Name values from the 'Name' column from the
 alst = pd.read_csv("data/all_stocks_5yr.csv")
@@ -111,6 +114,117 @@ def pick_stock():
 
     return ""
 
+
+
+def rmse(score):
+    """[summary]
+        Root Mean Square Error (RMSE) is the standard deviation of the residuals (prediction errors). 
+        Residuals are a measure of how far from the regression line data points are; 
+        RMSE is a measure of how spread out these residuals are. In other words, it tells you how concentrated the data is around the line of best fit. 
+        Root mean square error is commonly used in climatology, forecasting, and regression analysis to verify experimental results.
+        
+        Ref : https://www.statisticshowto.com/probability-and-statistics/regression-analysis/rmse-root-mean-square-error/
+    Args:
+        score (narray): cross validation score of each split
+    """
+
+    rmse = np.sqrt(-score)
+    print(f'rmse = {"{:.2f}".format(rmse)}')
+    return rmse
+
+def Average(lst): 
+    return sum(lst) / len(lst)
+
+
+
+def ChoseBest(stock_name):
+    try:
+        tunedata = pd.read_csv(f'data/tune/{stock_name}_tune_data.csv')
+    except FileExistsError:
+        print('\nFile doesnt exist.')
+        return None
+    
+    lsme_col = tunedata['labeled MSE']
+    min_value = lsme_col.min()
+    min_value_index = lsme_col.idxmin()
+
+    print(f'\nIndex: {min_value_index} \
+        \nMinimum Labeled MSE: {min_value} \
+            \nn_estimator: {tunedata.iloc[min_value_index, 1]} \
+                \nmax_depth: {tunedata.iloc[min_value_index, 2]} \
+                    \nmax_leaf_node: {tunedata.iloc[min_value_index, 3]} \
+                        \naverage kfold score: {tunedata.iloc[min_value_index, 4]} \
+                            \nLabeled baseline: {tunedata.iloc[min_value_index, 6]}')
+    
+    return min_value_index
+
+
+# Tuning 
+def Tune(train_set, dev_set, oldforest, stock_name):
+    
+    d = train_set.copy()
+    y = train_set[['target %']].values.ravel()
+    
+    d.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)                        # Removing target variable from training data
+    X = d.copy()
+    
+    kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    scores_current = []
+    treenum = 1
+
+    for model in oldforest:
+        score = cross_val_score(model, X, y, cv=kf, scoring="accuracy")
+        scores_current.append(score.mean())
+        treenum=treenum+1
+    
+    print(f'\nAverage score for our current the forest for each fold: {"{:.2f}".format(Average(scores_current))}')
+
+    
+    max_depth = [4,6,8,9]
+    max_leaf_nodes = [5,10, 20,30,40]
+    n_estimator = [5, 10, 20, 40, 60, 80]
+    all_models = pd.DataFrame(data=None, columns=['n_estimator', 'max_depth', 'max_leaf_node', 'average kfold score', 'labeled MSE', 'Labeled baseline'])
+    model_list = []
+    
+    for val in n_estimator:
+        for i in max_depth:
+            for j in max_leaf_nodes:
+                
+                dev_target = dev_set['target %']
+                
+                random_subsets = RandomSubsets(train_set, val, 0.4)
+                forest = RandomForest(random_subsets, mxdepth=i, mx_leaf_nodes=j)
+
+                scores = []
+                for tree in forest:
+                    score = cross_val_score(tree, X, y, cv=kf, scoring="accuracy")
+                    scores.append(score.mean())
+                avg = Average(scores)
+
+                lmse, lbse = [], []
+
+                for three in range (0, 3):
+                    dev_preds = MakePredictions(forest, dev_set)
+                    lmse.append(LabeledMSE(dev_preds, dev_target))
+                    lbse.append(Baseline(dev_target))
+                lmse = sum(lmse) / 3
+                lbse = sum(lbse) / 3
+
+                n_model = {'n_estimator': val, 'max_depth': i, 'max_leaf_node':j, 'average kfold score':avg, 'labeled MSE':lmse, 'Labeled baseline':lbse}
+                print(n_model)
+                all_models = all_models.append(n_model, ignore_index=True)
+                model_list.append(forest)
+                
+    ts = (f"data/tune/{stock_name}_tune_data.csv")
+    all_models.to_csv(ts)
+    
+    # Returning best forest here.. will need but will mute for now. Check out the csv to look at the best tree result
+    # index = ChoseBest(stock_name)
+    # return model_list[index]
+    
+
+
+
 def custom_features(stock_input=None):
     # build custom_features dataframe for a single stock
 
@@ -193,7 +307,7 @@ def custom_features(stock_input=None):
     return custom_features
 
 
-def RandomForest(train_sets):
+def RandomForest(train_sets, mxdepth, mx_leaf_nodes):
     forest = []
     random.seed(dt.datetime.now().microsecond)
     for i in range(0, len(train_sets)):
@@ -201,7 +315,8 @@ def RandomForest(train_sets):
         sub_target = sub_set['target %']
         sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
         rand_num = random.randint(0, 99999999)
-        n_tree = tree.DecisionTreeClassifier(random_state=rand_num, min_samples_leaf=3, max_depth=4, max_leaf_nodes=20, criterion='entropy', splitter='random')
+        n_tree = tree.DecisionTreeClassifier(random_state=rand_num, min_samples_leaf=3, max_depth=mxdepth, max_leaf_nodes=mx_leaf_nodes, criterion='entropy', splitter='random')
+        # print(f'Random state : {rand_num}')
         n_tree.fit(sub_set, sub_target)
         forest.append(n_tree)
     return forest
@@ -318,14 +433,23 @@ if __name__ == "__main__":
             dev_target = dev_set['target %']
 
             random_subsets = RandomSubsets(train_set, 40, 0.4)
-            forest = RandomForest(random_subsets)
+            forest = RandomForest(random_subsets, mxdepth=4, mx_leaf_nodes=20)
+            
             dev_preds = MakePredictions(forest, dev_set)
+            
             for i in range(0, len(dev_preds)):
                 print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
+            
             print("Labeled MSE: ", end="")
             print(LabeledMSE(dev_preds, dev_target))
             print("Labeled baseline:  ", end="")
             print(Baseline(dev_target))
+
+
+            # tunning might take a while since we didnt use the randomforest class from sklearn
+            Tune(train_set, dev_set, forest, stock_name)
+            ChoseBest(stock_name)
+
 
         # [Caleb] Figure out what features are significant
         # use pearsons correlation (Machine Learning HW2)
