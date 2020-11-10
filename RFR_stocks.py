@@ -185,12 +185,13 @@ def Tune(train_set, dev_set, oldforest, stock_name):
     n_estimator = [5, 10, 20, 40, 60, 80]
     all_models = pd.DataFrame(data=None, columns=['n_estimator', 'max_depth', 'max_leaf_node', 'average kfold score', 'labeled MSE', 'Labeled baseline'])
     model_list = []
-    
+    train_target = train_set['target %']
+    dev_target = dev_set['target %']
+    baseline = Baseline(train_set, train_target,  dev_set, dev_target)
+
     for val in n_estimator:
         for i in max_depth:
             for j in max_leaf_nodes:
-                
-                dev_target = dev_set['target %']
                 
                 random_subsets = RandomSubsets(train_set, val, 0.4)
                 forest = RandomForest(random_subsets, mxdepth=i, mx_leaf_nodes=j)
@@ -206,11 +207,11 @@ def Tune(train_set, dev_set, oldforest, stock_name):
                 for three in range (0, 3):
                     dev_preds = MakePredictions(forest, dev_set)
                     lmse.append(LabeledMSE(dev_preds, dev_target))
-                    lbse.append(Baseline(dev_target))
+                    lbse.append(baseline)
                 lmse = sum(lmse) / 3
                 lbse = sum(lbse) / 3
 
-                n_model = {'n_estimator': val, 'max_depth': i, 'max_leaf_node':j, 'average kfold score':avg, 'labeled MSE':lmse, 'Labeled baseline':lbse}
+                n_model = {'n_estimator': val, 'max_depth': i, 'max_leaf_node': j, 'average kfold score': avg, 'labeled MSE': lmse, 'Labeled baseline': lbse}
                 print(n_model)
                 all_models = all_models.append(n_model, ignore_index=True)
                 model_list.append(forest)
@@ -383,16 +384,18 @@ def LabeledMSE(preds, target):
     return GetMSE(NumericalLabelScore(preds), NumericalLabelScore(target))
 
 
-def Baseline(target):
-    baseline = []
-    for dat in target:
+def Baseline(train_set, train_target, dev_set, dev_target):
+    base = tree.DecisionTreeClassifier()
+    train_set = train_set.drop(columns=COLUMNS_TO_DROP)
+    dev_set = dev_set.drop(columns=COLUMNS_TO_DROP)
+    base.fit(train_set, train_target)
+    dev_preds = base.predict(dev_set)
+    '''for dat in target:
         if type(dat) == str:
             baseline.append("hold")
         else:
-            baseline.append(0)
-    if type(baseline[0]) == int:
-        return GetMSE(baseline, target)
-    return LabeledMSE(baseline, target)
+            baseline.append(0)'''
+    return LabeledMSE(dev_preds, dev_target)
 
 
 train_set = pd.DataFrame()
@@ -430,6 +433,7 @@ if __name__ == "__main__":
             train_set['target %'] = GenerateLabels(train_set['target %'])
             dev_set['target %'] = GenerateLabels(dev_set['target %'])
 
+            train_target = train_set['target %']
             dev_target = dev_set['target %']
 
             random_subsets = RandomSubsets(train_set, 40, 0.4)
@@ -443,7 +447,7 @@ if __name__ == "__main__":
             print("Labeled MSE: ", end="")
             print(LabeledMSE(dev_preds, dev_target))
             print("Labeled baseline:  ", end="")
-            print(Baseline(dev_target))
+            print(Baseline(train_set, train_target, dev_set, dev_target))
 
 
             # tunning might take a while since we didnt use the randomforest class from sklearn
