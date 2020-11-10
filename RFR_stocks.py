@@ -201,11 +201,16 @@ def Tune(train_set, dev_set, oldforest, stock_name):
                     scores.append(score.mean())
                 avg = Average(scores)
 
-                dev_preds = MakePredictions(forest, dev_set)
-                lmse = LabeledMSE(dev_preds, dev_target)
-                lbse = Baseline(dev_target)
+                lmse, lbse = [], []
 
-                n_model = {'n_estimator': val, 'max_depth':i, 'max_leaf_node':j, 'average kfold score':avg, 'labeled MSE':lmse, 'Labeled baseline':lbse}
+                for three in range (0, 3):
+                    dev_preds = MakePredictions(forest, dev_set)
+                    lmse.append(LabeledMSE(dev_preds, dev_target))
+                    lbse.append(Baseline(dev_target))
+                lmse = sum(lmse) / 3
+                lbse = sum(lbse) / 3
+
+                n_model = {'n_estimator': val, 'max_depth': i, 'max_leaf_node':j, 'average kfold score':avg, 'labeled MSE':lmse, 'Labeled baseline':lbse}
                 print(n_model)
                 all_models = all_models.append(n_model, ignore_index=True)
                 model_list.append(forest)
