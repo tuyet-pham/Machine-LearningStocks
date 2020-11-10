@@ -179,7 +179,7 @@ def Tune(train_set, dev_set, oldforest, stock_name):
     print(f'\nAverage score for our current the forest for each fold: {"{:.2f}".format(Average(scores_current))}')
 
     
-    max_depth = [4,6,8,9]
+    max_depth = [4,6,8,10]
     max_leaf_nodes = [5,10, 20,30,40]
     n_estimator = [5, 10, 20, 40, 60, 80]
     all_models = pd.DataFrame(data=None, columns=['n_estimator', 'max_depth', 'max_leaf_node', 'average kfold score', 'MSE', 'baseline MSE',
