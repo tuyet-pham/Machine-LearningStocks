@@ -115,7 +115,6 @@ def pick_stock():
     return ""
 
 
-
 def rmse(score):
     """[summary]
         Root Mean Square Error (RMSE) is the standard deviation of the residuals (prediction errors). 
@@ -132,9 +131,9 @@ def rmse(score):
     print(f'rmse = {"{:.2f}".format(rmse)}')
     return rmse
 
+
 def Average(lst): 
     return sum(lst) / len(lst)
-
 
 
 def ChoseBest(stock_name):
@@ -144,7 +143,7 @@ def ChoseBest(stock_name):
         print('\nFile doesnt exist.')
         return None
     
-    lsme_col = tunedata['labeled MSE']
+    lsme_col = tunedata['MSE']
     min_value = lsme_col.min()
     min_value_index = lsme_col.idxmin()
 
@@ -183,12 +182,15 @@ def Tune(train_set, dev_set, oldforest, stock_name):
     max_depth = [4,6,8,9]
     max_leaf_nodes = [5,10, 20,30,40]
     n_estimator = [5, 10, 20, 40, 60, 80]
-    all_models = pd.DataFrame(data=None, columns=['n_estimator', 'max_depth', 'max_leaf_node', 'average kfold score', 'labeled MSE', 'Labeled baseline'])
+    all_models = pd.DataFrame(data=None, columns=['n_estimator', 'max_depth', 'max_leaf_node', 'average kfold score', 'MSE', 'baseline MSE',
+                                                  'accuracy', "macro avg f1", "macro avg precision", "macro avg recall",
+                                                  "baseline accuracy", "baseline f1", "baseline precision", "baseline recall"])
     model_list = []
     train_target = train_set['target %']
     dev_target = dev_set['target %']
-    baseline = Baseline(train_set, train_target,  dev_set, dev_target)
-
+    baseline_stats = Baseline(train_set, train_target,  dev_set, dev_target)
+    baseline = baseline_stats[0]
+    baseline_stats = baseline_stats[1:]
     for val in n_estimator:
         for i in max_depth:
             for j in max_leaf_nodes:
@@ -202,16 +204,25 @@ def Tune(train_set, dev_set, oldforest, stock_name):
                     scores.append(score.mean())
                 avg = Average(scores)
 
-                lmse, lbse = [], []
+                lmse, lbse, f1_stats = [], [], [0, 0, 0, 0]
 
-                for three in range (0, 3):
+                num_loops = 20
+                for three in range (0, num_loops):
                     dev_preds = MakePredictions(forest, dev_set)
                     lmse.append(LabeledMSE(dev_preds, dev_target))
                     lbse.append(baseline)
-                lmse = sum(lmse) / 3
-                lbse = sum(lbse) / 3
+                    temp_f1_stats = ClassificationEvalStats(dev_preds, dev_target)
+                    for t_f1 in range(0, len(temp_f1_stats)):
+                        f1_stats[t_f1] += temp_f1_stats[t_f1] / num_loops
 
-                n_model = {'n_estimator': val, 'max_depth': i, 'max_leaf_node': j, 'average kfold score': avg, 'labeled MSE': lmse, 'Labeled baseline': lbse}
+                lmse = sum(lmse) / num_loops
+                lbse = sum(lbse) / num_loops
+
+                n_model = {'n_estimator': val, 'max_depth': i, 'max_leaf_node': j, 'average kfold score': avg,
+                           'MSE': lmse, 'baseline MSE': lbse, 'accuracy': f1_stats[0],
+                           "macro avg f1": f1_stats[1], "macro avg precision": f1_stats[2], "macro avg recall": f1_stats[3],
+                           "baseline accuracy": baseline_stats[0], "baseline f1": baseline_stats[1], "baseline precision": baseline_stats[2],
+                           "baseline recall": baseline_stats[3]}
                 print(n_model)
                 all_models = all_models.append(n_model, ignore_index=True)
                 model_list.append(forest)
@@ -222,8 +233,6 @@ def Tune(train_set, dev_set, oldforest, stock_name):
     # Returning best forest here.. will need but will mute for now. Check out the csv to look at the best tree result
     # index = ChoseBest(stock_name)
     # return model_list[index]
-    
-
 
 
 def custom_features(stock_input=None):
@@ -364,6 +373,54 @@ def GetMSE(preds, target):
     return float(sum / n)
 
 
+def ClassificationEvalStats(preds, target):
+    if len(preds) != len(target):
+        return
+    correct = 0
+    total = 0
+
+    def blank_stats():
+        return {
+            "num": 0,
+            "TP": 0,
+            "FP": 0,
+            "FN": 0
+        }
+
+    stats = {}
+    for p in preds:
+        stats[p] = blank_stats()
+    for p in target:
+        if p not in stats:
+            stats[p] = blank_stats()
+    for i in range(0, len(preds)):
+        stats[target[i]]["num"] += 1
+        total += 1
+        if preds[i] == target[i]:
+            stats[preds[i]]["TP"] += 1
+            correct += 1
+        else:
+            stats[preds[i]]["FP"] += 1
+            stats[target[i]]["FN"] += 1
+
+    accuracy = correct / total
+    calcs = {}
+    for s in stats:
+        temp = stats[s]
+        if temp["TP"] == 0:
+            precision, recall, f1 = 0, 0, 0
+        else:
+            precision = temp["TP"] / (temp["TP"] + temp["FP"])
+            recall = temp["TP"] / (temp["TP"] + temp["FN"])
+        calcs[s] = [temp["num"] / total, precision, recall]
+    macro_precision, macro_recall = 0, 0
+    for s in calcs:
+        macro_precision += calcs[s][0] * calcs[s][1]
+        macro_recall += calcs[s][0] * calcs[s][2]
+    macro_f1 = 2 * (1 / ((1 / macro_precision) + (1 / macro_recall)))
+    return accuracy, macro_f1, macro_precision, macro_recall
+
+
 def GenerateLabels(data):
     labels = []
     high = CUTOFF
@@ -395,7 +452,8 @@ def Baseline(train_set, train_target, dev_set, dev_target):
             baseline.append("hold")
         else:
             baseline.append(0)'''
-    return LabeledMSE(dev_preds, dev_target)
+    stats = ClassificationEvalStats(dev_preds, dev_target)
+    return LabeledMSE(dev_preds, dev_target), stats[0], stats[1], stats[2], stats[3]
 
 
 train_set = pd.DataFrame()
@@ -440,14 +498,16 @@ if __name__ == "__main__":
             forest = RandomForest(random_subsets, mxdepth=4, mx_leaf_nodes=20)
             
             dev_preds = MakePredictions(forest, dev_set)
-            
-            for i in range(0, len(dev_preds)):
+
+            ClassificationEvalStats(dev_preds, dev_target)
+
+            '''for i in range(0, len(dev_preds)):
                 print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
             
             print("Labeled MSE: ", end="")
             print(LabeledMSE(dev_preds, dev_target))
             print("Labeled baseline:  ", end="")
-            print(Baseline(train_set, train_target, dev_set, dev_target))
+            print(Baseline(train_set, train_target, dev_set, dev_target)[0])'''
 
 
             # tunning might take a while since we didnt use the randomforest class from sklearn
