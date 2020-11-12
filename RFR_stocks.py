@@ -3,7 +3,6 @@ from sklearn import tree
 from numpy import array
 import numpy as np
 import matplotlib as plot
-# import tqdm
 import datetime as dt
 import time
 import os
@@ -11,7 +10,6 @@ import random
 import statistics
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn import linear_model, tree, ensemble
-
 pd.options.display.max_rows=20
 
 
@@ -30,9 +28,36 @@ for e in alst:
     file1.writelines(e + "\n")
 file1.close()
 
+
+# Remove all but tech stocks.
+def GettingTechStocks(pathname):
+    
+    file1 = pd.read_csv(pathname)
+    file2 = pd.DataFrame()
+    
+    LISTOFTECH =['AAPL', 'ACN', 'ADBE', 'ADI', 'ADP', 'ADSK', 'AKAM', 'AMAT', 'AMD', \
+        'ANET', 'ANSS', 'APH', 'AVGO', 'BR', 'CDNS', 'CDW', 'CRM', 'CSCO', 'CTSH', 'CTXS', 'DXC', 'FFIV', \
+            'FIS', 'FISV', 'FLIR', 'FLT', 'FTNT', 'GLW', 'GPN', 'HPE', 'HPQ', 'IBM', 'INTC', 'INTU', 'IPGP', 'IT', \
+                'JKHY', 'JNPR', 'KEYS', 'KLAC', 'LDOS', 'LRCX', 'MA', 'MCHP', 'MSFT', 'MSI', 'MU', 'MXIM', 'NLOK', 'NOW', 'NTAP', 'NVDA', 'ORCL', \
+                    'PAYC', 'PAYX', 'PYPL', 'QCOM', 'QRVO', 'SNPS', 'STX', 'SWKS', 'TEL', 'TER', 'TXN', 'TYL', 'V', 'VNT', 'VRSN', 'WDC', 'WU', 'XLNX', 'XRX', 'ZBRA']
+    
+    file2["Name"] = LISTOFTECH
+    file2.to_csv("data/listTech.csv", index=False)
+
+    # open the listall.csv and compare
+    onlytech = file2['Name'].isin(file1['Name'])
+    
+    file2["isin_listall"] = onlytech
+    file2.to_csv("data/listTech.csv", index=False)
+
+    # print(file2)
+
+#Getting the csv for Techstocks only and seeing if it exists in our current listall
+GettingTechStocks("data/listall.csv")
+    
+
+
 def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
-    # for i in tqdm.tqdm(range(200)):
-    #     time.sleep(0.01)
 
     ts = (r"data/train/" + stock_name + "_train_data.csv")
     ds = (r"data/dev/" + stock_name + "_dev_data.csv")
@@ -40,7 +65,7 @@ def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
     dev_set.to_csv(ds, index=custom_feat)
     train_set.to_csv(ts, index=custom_feat)
 
-    time.sleep(.2)  # comment this out if you're going to use the tqdm library
+    time.sleep(.2)
     print("Train and Dev set file creation - Done")
 
 
@@ -68,29 +93,27 @@ def train_dev(stockname, dataframe=False):
         train_stock = df[(df['date'] > '2012-12-31') & (df['date'] < '2016-01-01')]
         dev_stock = df[(df['date'] > '2015-12-31') & (df['date'] < '2019-01-01')]
 
-    # Just Printing timer for extra coolness
-    # for i in tqdm.tqdm(range(200)):
-    #     time.sleep(0.01)
-
-    time.sleep(.2)  # comment this out if you're going to use the tqdm library
+    time.sleep(.2)
     print("Train and Dev set creation - Done")
     return train_stock, dev_stock
 
 
-# if we want to do this later I guess
-def train_all():
-    print("Running ALL... might be a minute")
-
-
-# Open listall
-try:
-    file1 = pd.read_csv('data/listall.csv')
-except FileExistsError:
-    print('\nFile doesnt exist.')
-
 
 # Picking an individual stock
 def pick_stock():
+        
+    # Open listall
+    try:
+        file1 = pd.read_csv('data/listall.csv')
+    except FileExistsError:
+        print('\nFile doesnt exist.')
+
+    # Open listall
+    try:
+        file2 = pd.read_csv('data/listTech.csv')
+    except FileExistsError:
+        print('\nFile doesnt exist.')
+
     """[summary]
         Make the user pick a correct stock
     Returns:
@@ -106,30 +129,12 @@ def pick_stock():
         if stkname == "QUIT":
             return ""
 
-        for e in file1['Name']:
-            if e == stkname:
-                return stkname
+        if (file2['Name']==stkname).any() and (file1['Name']==stkname).any():
+            return stkname
 
         print("Can't find %s Try again?" % stkname)
 
     return ""
-
-
-def rmse(score):
-    """[summary]
-        Root Mean Square Error (RMSE) is the standard deviation of the residuals (prediction errors). 
-        Residuals are a measure of how far from the regression line data points are; 
-        RMSE is a measure of how spread out these residuals are. In other words, it tells you how concentrated the data is around the line of best fit. 
-        Root mean square error is commonly used in climatology, forecasting, and regression analysis to verify experimental results.
-        
-        Ref : https://www.statisticshowto.com/probability-and-statistics/regression-analysis/rmse-root-mean-square-error/
-    Args:
-        score (narray): cross validation score of each split
-    """
-
-    rmse = np.sqrt(-score)
-    print(f'rmse = {"{:.2f}".format(rmse)}')
-    return rmse
 
 
 def Average(lst): 
@@ -155,7 +160,7 @@ def ChoseBest(stock_name):
                         \naverage kfold score: {tunedata.iloc[min_value_index, 4]} \
                             \nLabeled baseline: {tunedata.iloc[min_value_index, 6]}')
     
-    return min_value_index
+    return min_value_index, min_value
 
 
 # Tuning 
@@ -191,6 +196,8 @@ def Tune(train_set, dev_set, oldforest, stock_name):
     baseline_stats = Baseline(train_set, train_target,  dev_set, dev_target)
     baseline = baseline_stats[0]
     baseline_stats = baseline_stats[1:]
+    
+    
     for val in n_estimator:
         for i in max_depth:
             for j in max_leaf_nodes:
@@ -231,12 +238,12 @@ def Tune(train_set, dev_set, oldforest, stock_name):
     all_models.to_csv(ts)
     
     # Returning best forest here.. will need but will mute for now. Check out the csv to look at the best tree result
-    # index = ChoseBest(stock_name)
-    # return model_list[index]
+    index, score = ChoseBest(stock_name)
+    return model_list[index], score
 
 
+# build custom_features dataframe for a single stock
 def custom_features(stock_input=None):
-    # build custom_features dataframe for a single stock
 
     # file_name = "data/individual_stocks_5yr/AAPL_data.csv"
     if not stock_input:
@@ -466,61 +473,62 @@ COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'low', 'close', 'high', 'average'
 CUTOFF = 0.75
 
 if __name__ == "__main__":
-    # Run to make life easier
-    all_or_one = "n"
-    # all_or_one = input("Train ALL? *Say no for now* [y/n]: ")
+    stock_name = pick_stock()
+    if stock_name != "":
+        ts = (r"data/train/" + stock_name + "_train_data.csv")
+        ds = (r"data/dev/" + stock_name + "_dev_data.csv")
+        # noinspection PyBroadException
+        try:
+            train_set = pd.read_csv(ts, index_col="date")
+            dev_set = pd.read_csv(ds, index_col="date")
+        except:
+            custom = custom_features(stock_name)
+            train_set, dev_set = train_dev(custom, dataframe=True)
+        #print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
+        
+        # !Important - This will create .csv file of each sets.
+        # if using custom features, the fourth parameter should be true
+        train_dev_file(dev_set, train_set, stock_name, True)
 
-    if all_or_one == "n":
-        stock_name = pick_stock()
-        if stock_name != "":
-            ts = (r"data/train/" + stock_name + "_train_data.csv")
-            ds = (r"data/dev/" + stock_name + "_dev_data.csv")
-            # noinspection PyBroadException
-            try:
-                train_set = pd.read_csv(ts, index_col="date")
-                dev_set = pd.read_csv(ds, index_col="date")
-            except:
-                custom = custom_features(stock_name)
-                train_set, dev_set = train_dev(custom, dataframe=True)
-            #print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
-            # !Important - This will create .csv file of each sets.
-            # if using custom features, the fourth parameter should be true
-            train_dev_file(dev_set, train_set, stock_name, True)
+        # replacing target data with labels
+        train_set['target %'] = GenerateLabels(train_set['target %'])
+        dev_set['target %'] = GenerateLabels(dev_set['target %'])
 
-            # replacing target data with labels
-            train_set['target %'] = GenerateLabels(train_set['target %'])
-            dev_set['target %'] = GenerateLabels(dev_set['target %'])
+        train_target = train_set['target %']
+        dev_target = dev_set['target %']
 
-            train_target = train_set['target %']
-            dev_target = dev_set['target %']
+        random_subsets = RandomSubsets(train_set, 40, 0.4)
+        forest = RandomForest(random_subsets, mxdepth=4, mx_leaf_nodes=20)
+        
+        dev_preds = MakePredictions(forest, dev_set)
 
-            random_subsets = RandomSubsets(train_set, 40, 0.4)
-            forest = RandomForest(random_subsets, mxdepth=4, mx_leaf_nodes=20)
-            
-            dev_preds = MakePredictions(forest, dev_set)
+        ClassificationEvalStats(dev_preds, dev_target)
 
-            ClassificationEvalStats(dev_preds, dev_target)
-
-            '''for i in range(0, len(dev_preds)):
-                print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
-            
-            print("Labeled MSE: ", end="")
-            print(LabeledMSE(dev_preds, dev_target))
-            print("Labeled baseline:  ", end="")
-            print(Baseline(train_set, train_target, dev_set, dev_target)[0])'''
+        '''for i in range(0, len(dev_preds)):
+            print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
+        
+        print("Labeled MSE: ", end="")
+        print(LabeledMSE(dev_preds, dev_target))
+        print("Labeled baseline:  ", end="")
+        print(Baseline(train_set, train_target, dev_set, dev_target)[0])'''
 
 
-            # tunning might take a while since we didnt use the randomforest class from sklearn
-            Tune(train_set, dev_set, forest, stock_name)
-            ChoseBest(stock_name)
+        typesector="listTech"
+        # tunning might take a while since we didnt use the randomforest class from sklearn
+        df = pd.read_csv(f"data/{typesector}.csv")
+        nc = df['Name']   
+        cc = df['isin_listall']
+        s = len(df)
+        avg = []
+        forestlist = []
+        for i in range(0, 10):
+            rand_index = random.randint(0, s)
+            if cc[rand_index]:
+                print(f"\nTuning ========== \nRandom index : {rand_index}\nStock Name: {nc[rand_index]}")
+                forest, score = Tune(train_set, dev_set, forest, nc[rand_index])
+                avg.append(score)
+                forestlist.append(forest)
 
-
-        # [Caleb] Figure out what features are significant
-        # use pearsons correlation (Machine Learning HW2)
-
-        # Create random subset - 50% - 60%
-        # [Kyle]  1. Create many (e.g. 100) random sub-samples of our dataset with replacement.
-        # [Tuyet] 2. Train a Random Forest model on each sample.
-        # [Jon]   3. Given a new dataset, calculate the average prediction from each model.
-    # else:
-    #     train_all()
+        print(f'The Average Tuning score of 10 stocks is {Average(avg)}')
+        for i in forestlist:
+            print(forestlist)
