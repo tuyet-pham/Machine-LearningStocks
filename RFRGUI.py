@@ -101,6 +101,7 @@ class StockPicker(Frame):
         RLabel(self, fg='gray70', text="Choose Sets").grid(row=0, column=0, columnspan=4, pady=15, padx=15, sticky=W)
 
         self.setdefault()
+        self.setrequired_(2)
 
     
     def chosestock(self, stype):
@@ -111,19 +112,41 @@ class StockPicker(Frame):
         elif stype == 2:
             self.entrydev.delete(0,'end')
             self.entrydev.insert(0, self.filename)
+        elif stype == 3:
+            self.entryfull.delete(0,'end')
+            self.entryfull.insert(0, self.filename)
         
     def setrequired_(self, stype):
         if stype == 2:
+            self.entrydev.delete(0,'end')
+            self.entrytrain.delete(0,'end')
             self.browsebut1['state'] = tk.DISABLED
             self.browsebut2['state'] = tk.DISABLED
             self.entrydev['state'] = tk.DISABLED
             self.entrytrain['state'] = tk.DISABLED
+            self.browsebut3['state'] = tk.NORMAL
+            self.entryfull['state'] = tk.NORMAL
+            self.flabel['state'] = tk.NORMAL
         elif stype == 1:
             self.browsebut1['state'] = tk.NORMAL
             self.browsebut2['state'] = tk.NORMAL
             self.entrydev['state'] = tk.NORMAL
             self.entrytrain['state'] = tk.NORMAL
+            self.browsebut3['state'] = tk.DISABLED
+            self.entryfull.delete(0,'end')
+            self.entryfull['state'] = tk.DISABLED
+            self.flabel['state'] = tk.DISABLED
     
+    def runstock(self):
+        if self.entryfull['state'] == tk.DISABLED:
+            trainfile = self.entrytrain.get()
+            devfile = self.entrydev.get()
+            print(trainfile)
+            print(devfile)
+        elif self.entryfull['state'] == tk.NORMAL:
+            fullpath = self.entryfull.get()
+            print(fullpath)
+
     
     def setdefault(self):
         RLabel(self, font=('Helvetica', 11, "normal"), text="Does your set require splitting?").grid(row=1, column=0, columnspan=3, padx=15, sticky=W)
@@ -131,7 +154,6 @@ class StockPicker(Frame):
         v = tk.IntVar()
         RRadiobutton(self, text="Splitting required", command=lambda: self.setrequired_(2), variable=v, value=1).grid(row=2, column=0, columnspan=2, pady=5, padx=15, sticky=W)
         RRadiobutton(self, text="Splitting not required", variable=v, value=2, command=lambda: self.setrequired_(1)).grid(row=2, column=2, columnspan=4, pady=5, sticky=W)
-
         
         RLabel(self, font=('Helvetica', 11, "normal"), text="Training set").grid(row=3, column=0, columnspan=2, padx=15, sticky=W)
         self.browsebut1 = RButtonDark(self, width=15, text="Browse", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.chosestock(1))
@@ -144,6 +166,19 @@ class StockPicker(Frame):
         self.browsebut2.grid(row=6, column=2, columnspan=4, pady=5, sticky=E)
         self.entrydev = REntry(self, width=45)
         self.entrydev.grid(row=6, column=0, ipady=3, columnspan=2, pady=5, padx=15, sticky=W)
+        
+        self.flabel = RLabel(self, font=('Helvetica', 11, "normal"), text="Full Set")
+        self.flabel.grid(row=7, column=0, columnspan=2, padx=15, sticky=W)
+        self.browsebut3 = RButtonDark(self, width=15, text="Browse", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.chosestock(3))
+        self.browsebut3.grid(row=8, column=2, columnspan=4, pady=5, sticky=E)
+        self.entryfull = REntry(self, width=45)
+        self.entryfull.grid(row=8, column=0, ipady=3, columnspan=2, pady=5, padx=15, sticky=W)
+        
+        self.runbutton = RButtonDark(self, width=15, text="Go!", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.runstock())
+        self.runbutton.grid(row=9, column=0, columnspan=4, pady=5, padx=15, sticky=W)
+
+        
+        
         
         
 # ----------- About App ----------- #

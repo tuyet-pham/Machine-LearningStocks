@@ -519,7 +519,7 @@ if __name__ == "__main__":
         avg = []
         forestlist = []
         i = 0
-        while i < 10:
+        while i < 11:
             rand_index = random.randint(0, s)
             if cc[rand_index]:
                 print(f"\nTuning ========== \nRandom index : {rand_index}\nStock Name: {nc[rand_index]}")
