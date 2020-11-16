@@ -87,6 +87,7 @@ class REntry(Entry):
         self['highlightthickness'] = 0
         self['relief'] ='flat'
         self['selectbackground'] = 'gray30'
+        self['disabledbackground'] = 'gray10'
         
         if kwargs.get('bg', '') == '':
             self['bg'] = 'gray20'
