@@ -1,16 +1,12 @@
+
 import pandas as pd
-from sklearn import tree
-from numpy import array
-import numpy as np
-import matplotlib as plot
 import datetime as dt
 import time
-import os
 import random
 import statistics
 from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn import linear_model, tree, ensemble
-pd.options.display.max_rows=20
+from sklearn import tree
+pd.options.display.max_rows = 20
 
 
 # To get the list of Name values from the 'Name' column from the
@@ -32,23 +28,23 @@ file1.close()
 # Remove all but tech stocks.
 def GettingTechStocks(pathname):
     
-    file1 = pd.read_csv(pathname)
-    file2 = pd.DataFrame()
+    filall = pd.read_csv(pathname)
+    filetech = pd.DataFrame()
     
-    LISTOFTECH =['AAPL', 'ACN', 'ADBE', 'ADI', 'ADP', 'ADSK', 'AKAM', 'AMAT', 'AMD', \
-        'ANET', 'ANSS', 'APH', 'AVGO', 'BR', 'CDNS', 'CDW', 'CRM', 'CSCO', 'CTSH', 'CTXS', 'DXC', 'FFIV', \
-            'FIS', 'FISV', 'FLIR', 'FLT', 'FTNT', 'GLW', 'GPN', 'HPE', 'HPQ', 'IBM', 'INTC', 'INTU', 'IPGP', 'IT', \
-                'JKHY', 'JNPR', 'KEYS', 'KLAC', 'LDOS', 'LRCX', 'MA', 'MCHP', 'MSFT', 'MSI', 'MU', 'MXIM', 'NLOK', 'NOW', 'NTAP', 'NVDA', 'ORCL', \
+    LISTOFTECH = ['AAPL', 'ACN', 'ADBE', 'ADI', 'ADP', 'ADSK', 'AKAM', 'AMAT', 'AMD',
+        'ANET', 'ANSS', 'APH', 'AVGO', 'BR', 'CDNS', 'CDW', 'CRM', 'CSCO', 'CTSH', 'CTXS', 'DXC', 'FFIV',
+            'FIS', 'FISV', 'FLIR', 'FLT', 'FTNT', 'GLW', 'GPN', 'HPE', 'HPQ', 'IBM', 'INTC', 'INTU', 'IPGP', 'IT',
+                'JKHY', 'JNPR', 'KEYS', 'KLAC', 'LDOS', 'LRCX', 'MA', 'MCHP', 'MSFT', 'MSI', 'MU', 'MXIM', 'NLOK', 'NOW', 'NTAP', 'NVDA', 'ORCL',
                     'PAYC', 'PAYX', 'PYPL', 'QCOM', 'QRVO', 'SNPS', 'STX', 'SWKS', 'TEL', 'TER', 'TXN', 'TYL', 'V', 'VNT', 'VRSN', 'WDC', 'WU', 'XLNX', 'XRX', 'ZBRA']
     
-    file2["Name"] = LISTOFTECH
-    file2.to_csv("data/listTech.csv", index=False)
+    filetech["Name"] = LISTOFTECH
+    filetech.to_csv("data/listTech.csv", index=False)
 
     # open the listall.csv and compare
-    onlytech = file2['Name'].isin(file1['Name'])
+    onlytech = filetech['Name'].isin(filall['Name'])
     
-    file2["isin_listall"] = onlytech
-    file2.to_csv("data/listTech.csv", index=False)
+    filetech["isin_listall"] = onlytech
+    filetech.to_csv("data/listTech.csv", index=False)
 
     # print(file2)
 
@@ -107,12 +103,14 @@ def pick_stock():
         file1 = pd.read_csv('data/listall.csv')
     except FileExistsError:
         print('\nFile doesnt exist.')
+        return ""
 
     # Open listall
     try:
         file2 = pd.read_csv('data/listTech.csv')
     except FileExistsError:
         print('\nFile doesnt exist.')
+        return ""
 
     """[summary]
         Make the user pick a correct stock
@@ -129,7 +127,7 @@ def pick_stock():
         if stkname == "QUIT":
             return ""
 
-        if (file2['Name']==stkname).any() and (file1['Name']==stkname).any():
+        if (file2['Name'] == stkname).any() and (file1['Name'] == stkname).any():
             return stkname
 
         print("Can't find %s Try again?" % stkname)
@@ -481,7 +479,7 @@ if __name__ == "__main__":
         try:
             train_set = pd.read_csv(ts, index_col="date")
             dev_set = pd.read_csv(ds, index_col="date")
-        except:
+        except FileNotFoundError:
             custom = custom_features(stock_name)
             train_set, dev_set = train_dev(custom, dataframe=True)
         #print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
@@ -512,8 +510,7 @@ if __name__ == "__main__":
         print("Labeled baseline:  ", end="")
         print(Baseline(train_set, train_target, dev_set, dev_target)[0])'''
 
-
-        typesector="listTech"
+        typesector = "listTech"
         # tunning might take a while since we didnt use the randomforest class from sklearn
         df = pd.read_csv(f"data/{typesector}.csv")
         nc = df['Name']   
@@ -531,4 +528,4 @@ if __name__ == "__main__":
 
         print(f'The Average Tuning score of 10 stocks is {Average(avg)}')
         for i in forestlist:
-            print(forestlist)
+            print(i[:])
