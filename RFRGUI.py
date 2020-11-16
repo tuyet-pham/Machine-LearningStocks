@@ -115,6 +115,9 @@ class StockPicker(Frame):
         elif stype == 3:
             self.entryfull.delete(0,'end')
             self.entryfull.insert(0, self.filename)
+        elif stype == 4:
+            self.entrytest.delete(0,'end')
+            self.entrytest.insert(0, self.filename)
         
     def setrequired_(self, stype):
         if stype == 2:
@@ -126,7 +129,6 @@ class StockPicker(Frame):
             self.entrytrain['state'] = tk.DISABLED
             self.browsebut3['state'] = tk.NORMAL
             self.entryfull['state'] = tk.NORMAL
-            self.flabel['state'] = tk.NORMAL
         elif stype == 1:
             self.browsebut1['state'] = tk.NORMAL
             self.browsebut2['state'] = tk.NORMAL
@@ -135,19 +137,22 @@ class StockPicker(Frame):
             self.browsebut3['state'] = tk.DISABLED
             self.entryfull.delete(0,'end')
             self.entryfull['state'] = tk.DISABLED
-            self.flabel['state'] = tk.DISABLED
     
     def runstock(self):
         if self.entryfull['state'] == tk.DISABLED:
             trainfile = self.entrytrain.get()
             devfile = self.entrydev.get()
+            testfile = self.entrytest.get()
             print(trainfile)
             print(devfile)
+            print(testfile)
         elif self.entryfull['state'] == tk.NORMAL:
             fullpath = self.entryfull.get()
+            testfile = self.entrytest.get()
             print(fullpath)
+            print(testfile)
+            
 
-    
     def setdefault(self):
         RLabel(self, font=('Helvetica', 11, "normal"), text="Does your set require splitting?").grid(row=1, column=0, columnspan=3, padx=15, sticky=W)
 
@@ -167,15 +172,22 @@ class StockPicker(Frame):
         self.entrydev = REntry(self, width=45)
         self.entrydev.grid(row=6, column=0, ipady=3, columnspan=2, pady=5, padx=15, sticky=W)
         
-        self.flabel = RLabel(self, font=('Helvetica', 11, "normal"), text="Full Set")
-        self.flabel.grid(row=7, column=0, columnspan=2, padx=15, sticky=W)
+        RLabel(self, font=('Helvetica', 11, "normal"), text="Full Set").grid(row=7, column=0, columnspan=2, padx=15, sticky=W)
         self.browsebut3 = RButtonDark(self, width=15, text="Browse", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.chosestock(3))
         self.browsebut3.grid(row=8, column=2, columnspan=4, pady=5, sticky=E)
         self.entryfull = REntry(self, width=45)
         self.entryfull.grid(row=8, column=0, ipady=3, columnspan=2, pady=5, padx=15, sticky=W)
         
-        self.runbutton = RButtonDark(self, width=15, text="Go!", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.runstock())
-        self.runbutton.grid(row=9, column=0, columnspan=4, pady=5, padx=15, sticky=W)
+        RLabel(self, font=('Helvetica', 11, "normal"), text="Testing Set").grid(row=9, column=0, columnspan=2, padx=15, sticky=W)
+        self.browsebut4 = RButtonDark(self, width=15, text="Browse", bg='MediumSlateBlue', fg='snow', height=1, command=lambda: self.chosestock(4))
+        self.browsebut4.grid(row=10, column=2, columnspan=4, pady=5, sticky=E)
+        self.entrytest = REntry(self, width=45)
+        self.entrytest.grid(row=10, column=0, ipady=3, columnspan=2, pady=5, padx=15, sticky=W)
+        
+        
+        
+        self.runbutton = RButtonDark(self,width=15, text="Select Sets", bg='MediumSlateBlue', fg='snow', height=2, command=lambda: self.runstock())
+        self.runbutton.grid(row=11, column=0, columnspan=4, pady=10, padx=15, sticky=W)
 
         
         
@@ -225,3 +237,4 @@ class Tables(tk.Frame):
 if __name__ == "__main__":
     app = Switch()
     app.mainloop()
+    
