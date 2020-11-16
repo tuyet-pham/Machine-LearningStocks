@@ -518,7 +518,7 @@ if __name__ == "__main__":
         s = len(df)
         avg = []
         forestlist = []
-        i = 0
+        i = 1
         while i < 11:
             rand_index = random.randint(0, s)
             if cc[rand_index]:
