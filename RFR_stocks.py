@@ -518,13 +518,15 @@ if __name__ == "__main__":
         s = len(df)
         avg = []
         forestlist = []
-        for i in range(0, 10):
+        i = 0
+        while i < 10:
             rand_index = random.randint(0, s)
             if cc[rand_index]:
                 print(f"\nTuning ========== \nRandom index : {rand_index}\nStock Name: {nc[rand_index]}")
                 forest, score = Tune(train_set, dev_set, forest, nc[rand_index])
                 avg.append(score)
                 forestlist.append(forest)
+                i=i+1
 
         print(f'The Average Tuning score of 10 stocks is {Average(avg)}')
         for i in forestlist:
