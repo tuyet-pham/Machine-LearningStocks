@@ -233,7 +233,6 @@ class Tables(tk.Frame):
 
 
 
-
 if __name__ == "__main__":
     app = Switch()
     app.mainloop()

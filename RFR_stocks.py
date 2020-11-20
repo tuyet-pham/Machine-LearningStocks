@@ -1,11 +1,10 @@
-
 import pandas as pd
 import datetime as dt
 import time
 import random
 import statistics
-from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn import tree
+from sklearn.model_selection import StratifiedKFold, cross_val_score, GridSearchCV
+from sklearn.tree import DecisionTreeClassifier
 pd.options.display.max_rows = 20
 
 
@@ -162,32 +161,39 @@ def ChoseBest(stock_name):
 
 
 # Tuning 
-def Tune(train_set, dev_set, oldforest, stock_name):
+def Tune(train_set, dev_set, oldforest, tune_cycle):
+
+    # Forest Param 
+    n_estimator = [15, 20, 25, 30, 70, 80, 90, 200]
+
+    # https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html    
+    # Tree Param
+    param_dict_tree = {
+        "min_samples_leaf": [2,3,4,5,6,7,8], 
+        "max_depth": [2,3,4,5,6,7,8,9,10],
+        "max_leaf_nodes": [5,7,8,10,12,14,16,20],
+        "criterion": ['entropy', 'gini'],
+        "splitter": ['random']
+    }
     
-    d = train_set.copy()
-    y = train_set[['target %']].values.ravel()
+    X_train = train_set.copy()
+    X_train.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)
+    y_train = train_set[['target %']].values.ravel()
     
-    d.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)                        # Removing target variable from training data
-    X = d.copy()
+    X_dev = dev_set.copy()
+    X_dev.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)
+    y_dev = dev_set[['target %']].values.ravel()
+
+    # print(f'X_train: \n\n{X_train}\ny_train:\n\n{y_train}')
+    # print(f'X_dev: \n\n{X_dev}\ny_dev:\n\n{y_dev}')
+
     
+    # Get best tree model
     kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    scores_current = []
-    treenum = 1
-
-    for model in oldforest:
-        score = cross_val_score(model, X, y, cv=kf, scoring="accuracy")
-        scores_current.append(score.mean())
-        treenum=treenum+1
-    
-    print(f'\nAverage score for our current the forest for each fold: {"{:.2f}".format(Average(scores_current))}')
-
-    
-    max_depth = [4,6,8,10]
-    max_leaf_nodes = [5,10, 20,30,40]
-    n_estimator = [5, 10, 20, 40, 60, 80]
-    all_models = pd.DataFrame(data=None, columns=['n_estimator', 'max_depth', 'max_leaf_node', 'average kfold score', 'MSE', 'baseline MSE',
+    all_models = pd.DataFrame(data=None, columns=['n_estimator', 'max_depth', 'max_leaf_node','criterion','min_samples_leaf','splitter','average kfold score', 'MSE', 'baseline MSE',
                                                   'accuracy', "macro avg f1", "macro avg precision", "macro avg recall",
                                                   "baseline accuracy", "baseline f1", "baseline precision", "baseline recall"])
+    
     model_list = []
     train_target = train_set['target %']
     dev_target = dev_set['target %']
@@ -195,49 +201,62 @@ def Tune(train_set, dev_set, oldforest, stock_name):
     baseline = baseline_stats[0]
     baseline_stats = baseline_stats[1:]
     
-    
-    for val in n_estimator:
-        for i in max_depth:
-            for j in max_leaf_nodes:
-                
-                random_subsets = RandomSubsets(train_set, val, 0.4)
-                forest = RandomForest(random_subsets, mxdepth=i, mx_leaf_nodes=j)
+    for count in range(0, tune_cycle):
+        decisionTree = DecisionTreeClassifier()
+        decisionTree.fit(X_train, y_train)
+        grid = GridSearchCV(decisionTree,
+                            param_grid=param_dict_tree,
+                            cv=kf,
+                            scoring='accuracy')
+        grid.fit(X_train, y_train)
+        best_param = grid.best_params_
+        print(f'\nBest params for tuning cycle ({count+1}) : {best_param}\n')
+        
+        for n_size in n_estimator:
+            
+            random_subsets = RandomSubsets(train_set, n_size, 0.4)
+            forest = RandomForest(random_subsets, tree_params=best_param)
+            
+            scores = []
+            for tree in forest:
+                score = cross_val_score(tree, X_dev, y_dev, cv=kf, scoring="accuracy")
+                scores.append(score.mean())
+            avg = Average(scores)
 
-                scores = []
-                for tree in forest:
-                    score = cross_val_score(tree, X, y, cv=kf, scoring="accuracy")
-                    scores.append(score.mean())
-                avg = Average(scores)
+            lmse, lbse, f1_stats = [], [], [0, 0, 0, 0]
 
-                lmse, lbse, f1_stats = [], [], [0, 0, 0, 0]
+            num_loops = 20
+            for three in range (0, num_loops):
+                dev_preds = MakePredictions(forest, dev_set)
+                lmse.append(LabeledMSE(dev_preds, y_dev))
+                lbse.append(baseline)
+                temp_f1_stats = ClassificationEvalStats(dev_preds, y_dev)
+                for t_f1 in range(0, len(temp_f1_stats)):
+                    f1_stats[t_f1] += temp_f1_stats[t_f1] / num_loops
 
-                num_loops = 20
-                for three in range (0, num_loops):
-                    dev_preds = MakePredictions(forest, dev_set)
-                    lmse.append(LabeledMSE(dev_preds, dev_target))
-                    lbse.append(baseline)
-                    temp_f1_stats = ClassificationEvalStats(dev_preds, dev_target)
-                    for t_f1 in range(0, len(temp_f1_stats)):
-                        f1_stats[t_f1] += temp_f1_stats[t_f1] / num_loops
+            lmse = sum(lmse) / num_loops
+            lbse = sum(lbse) / num_loops
+            
+            n_model = {'n_estimator': n_size, 'max_depth': best_param['max_depth'], 'max_leaf_node': best_param['max_leaf_nodes'] , 'criterion':best_param['criterion'], 
+                    'min_samples_leaf':best_param['min_samples_leaf'], 'splitter':best_param['splitter'], 'average kfold score': avg,
+                    'MSE': lmse, 'baseline MSE': lbse, 'accuracy': f1_stats[0],
+                    "macro avg f1": f1_stats[1], "macro avg precision": f1_stats[2], "macro avg recall": f1_stats[3],
+                    "baseline accuracy": baseline_stats[0], "baseline f1": baseline_stats[1], "baseline precision": baseline_stats[2],
+                    "baseline recall": baseline_stats[3]}
+            print(n_model)
+            # print(forest)
 
-                lmse = sum(lmse) / num_loops
-                lbse = sum(lbse) / num_loops
+            all_models = all_models.append(n_model, ignore_index=True)
+            model_list.append(forest)
 
-                n_model = {'n_estimator': val, 'max_depth': i, 'max_leaf_node': j, 'average kfold score': avg,
-                           'MSE': lmse, 'baseline MSE': lbse, 'accuracy': f1_stats[0],
-                           "macro avg f1": f1_stats[1], "macro avg precision": f1_stats[2], "macro avg recall": f1_stats[3],
-                           "baseline accuracy": baseline_stats[0], "baseline f1": baseline_stats[1], "baseline precision": baseline_stats[2],
-                           "baseline recall": baseline_stats[3]}
-                print(n_model)
-                all_models = all_models.append(n_model, ignore_index=True)
-                model_list.append(forest)
-                
     ts = (f"data/tune/{stock_name}_tune_data.csv")
     all_models.to_csv(ts)
     
-    # Returning best forest here.. will need but will mute for now. Check out the csv to look at the best tree result
-    index, score = ChoseBest(stock_name)
-    return model_list[index], score
+    # # Returning best forest here.. will need but will mute for now. Check out the csv to look at the best tree result
+    # index, score = ChoseBest(stock_name)
+    # return model_list[index], score
+
+
 
 
 # build custom_features dataframe for a single stock
@@ -322,18 +341,27 @@ def custom_features(stock_input=None):
     return custom_features
 
 
-def RandomForest(train_sets, mxdepth, mx_leaf_nodes):
+def RandomForest(train_sets, tree_params):
     forest = []
     random.seed(dt.datetime.now().microsecond)
-    for i in range(0, len(train_sets)):
-        sub_set = train_sets[i]
-        sub_target = sub_set['target %']
-        sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
-        rand_num = random.randint(0, 99999999)
-        n_tree = tree.DecisionTreeClassifier(random_state=rand_num, min_samples_leaf=3, max_depth=mxdepth, max_leaf_nodes=mx_leaf_nodes, criterion='entropy', splitter='random')
-        # print(f'Random state : {rand_num}')
-        n_tree.fit(sub_set, sub_target)
-        forest.append(n_tree)
+    if tree_params == None:
+        for i in range(0, len(train_sets)):
+            sub_set = train_sets[i]
+            sub_target = sub_set['target %']
+            sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
+            rand_num = random.randint(0, 99999999)
+            n_tree = DecisionTreeClassifier()
+            n_tree.fit(sub_set, sub_target)
+            forest.append(n_tree)
+    else:
+        for i in range(0, len(train_sets)):
+            sub_set = train_sets[i]
+            sub_target = sub_set['target %']
+            sub_set = sub_set.drop(columns=COLUMNS_TO_DROP)
+            rand_num = random.randint(0, 99999999)
+            n_tree = DecisionTreeClassifier(random_state=rand_num,**tree_params)
+            n_tree.fit(sub_set, sub_target)
+            forest.append(n_tree)
     return forest
 
 
@@ -447,7 +475,7 @@ def LabeledMSE(preds, target):
 
 
 def Baseline(train_set, train_target, dev_set, dev_target):
-    base = tree.DecisionTreeClassifier()
+    base = DecisionTreeClassifier()
     train_set = train_set.drop(columns=COLUMNS_TO_DROP)
     dev_set = dev_set.drop(columns=COLUMNS_TO_DROP)
     base.fit(train_set, train_target)
@@ -496,38 +524,24 @@ if __name__ == "__main__":
         dev_target = dev_set['target %']
 
         random_subsets = RandomSubsets(train_set, 40, 0.4)
-        forest = RandomForest(random_subsets, mxdepth=4, mx_leaf_nodes=20)
+        forest = RandomForest(random_subsets, tree_params=None)
         
         dev_preds = MakePredictions(forest, dev_set)
 
         ClassificationEvalStats(dev_preds, dev_target)
 
-        '''for i in range(0, len(dev_preds)):
-            print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
+        # for i in range(0, len(dev_preds)):
+        #     print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
         
         print("Labeled MSE: ", end="")
         print(LabeledMSE(dev_preds, dev_target))
         print("Labeled baseline:  ", end="")
-        print(Baseline(train_set, train_target, dev_set, dev_target)[0])'''
+        print(Baseline(train_set, train_target, dev_set, dev_target)[0])
 
-        typesector = "listTech"
-        # tunning might take a while since we didnt use the randomforest class from sklearn
-        df = pd.read_csv(f"data/{typesector}.csv")
-        nc = df['Name']   
-        cc = df['isin_listall']
-        s = len(df)
-        avg = []
-        forestlist = []
-        i = 1
-        while i < 11:
-            rand_index = random.randint(0, s)
-            if cc[rand_index]:
-                print(f"\nTuning ========== \nRandom index : {rand_index}\nStock Name: {nc[rand_index]}")
-                forest, score = Tune(train_set, dev_set, forest, nc[rand_index])
-                avg.append(score)
-                forestlist.append(forest)
-                i=i+1
+        # print(forest)
+        
+        tunecount = input("How many tuning cycle do you want? ")
+        Tune(train_set, dev_set, forest, int(tunecount))
 
-        print(f'The Average Tuning score of 10 stocks is {Average(avg)}')
-        for i in forestlist:
-            print(i[:])
+
+
