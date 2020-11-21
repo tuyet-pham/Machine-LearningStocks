@@ -161,10 +161,10 @@ def ChoseBest(stock_name):
 
 
 # Tuning 
-def Tune(train_set, dev_set, oldforest, tune_cycle):
+def Tune(train_set, dev_set, oldforest, tune_cycle, stock_name):
 
     # Forest Param 
-    n_estimator = [15, 20, 25, 30, 70, 80, 90, 200]
+    n_estimator = [5,10,13,15,20,21,23,25,27,30,40,45,55,60,65,70,80,90,100]
 
     # https://scikit-learn.org/stable/modules/generated/sklearn.tree.DecisionTreeClassifier.html    
     # Tree Param
@@ -194,67 +194,74 @@ def Tune(train_set, dev_set, oldforest, tune_cycle):
                                                   'accuracy', "macro avg f1", "macro avg precision", "macro avg recall",
                                                   "baseline accuracy", "baseline f1", "baseline precision", "baseline recall"])
     
-    model_list = []
+    forest_model_list = []
     train_target = train_set['target %']
     dev_target = dev_set['target %']
     baseline_stats = Baseline(train_set, train_target,  dev_set, dev_target)
     baseline = baseline_stats[0]
     baseline_stats = baseline_stats[1:]
-    
-    for count in range(0, tune_cycle):
-        decisionTree = DecisionTreeClassifier()
-        decisionTree.fit(X_train, y_train)
-        grid = GridSearchCV(decisionTree,
-                            param_grid=param_dict_tree,
-                            cv=kf,
-                            scoring='accuracy')
-        grid.fit(X_train, y_train)
-        best_param = grid.best_params_
-        print(f'\nBest params for tuning cycle ({count+1}) : {best_param}\n')
         
-        for n_size in n_estimator:
             
-            random_subsets = RandomSubsets(train_set, n_size, 0.4)
-            forest = RandomForest(random_subsets, tree_params=best_param)
-            
-            scores = []
-            for tree in forest:
-                score = cross_val_score(tree, X_dev, y_dev, cv=kf, scoring="accuracy")
-                scores.append(score.mean())
-            avg = Average(scores)
+    for count in range(0, tune_cycle):
+        tree_model_list = []
+        best_param = None
+        for i in range(0, 20):
+            decisionTree = DecisionTreeClassifier()
+            decisionTree.fit(X_train, y_train)
+            grid = GridSearchCV(decisionTree,
+                                param_grid=param_dict_tree,
+                                cv=kf,
+                                scoring='accuracy')
+            grid.fit(X_train, y_train)
+            best_param = grid.best_params_
+            tree_model_list.append(best_param)        
+            print(f'Best params for tuning cycle ({count+1}) : {best_param}')
 
-            lmse, lbse, f1_stats = [], [], [0, 0, 0, 0]
+        # Get the mode of best param
+        for model in tree_model_list:
+            for n_size in n_estimator:
+                
+                random_subsets = RandomSubsets(train_set, n_size, 0.4)
+                forest = RandomForest(random_subsets, tree_params=model)
+                
+                scores = []
+                for tree in forest:
+                    score = cross_val_score(tree, X_dev, y_dev, cv=kf, scoring="accuracy")
+                    scores.append(score.mean())
+                avg = Average(scores)
 
-            num_loops = 20
-            for three in range (0, num_loops):
-                dev_preds = MakePredictions(forest, dev_set)
-                lmse.append(LabeledMSE(dev_preds, y_dev))
-                lbse.append(baseline)
-                temp_f1_stats = ClassificationEvalStats(dev_preds, y_dev)
-                for t_f1 in range(0, len(temp_f1_stats)):
-                    f1_stats[t_f1] += temp_f1_stats[t_f1] / num_loops
+                lmse, lbse, f1_stats = [], [], [0, 0, 0, 0]
 
-            lmse = sum(lmse) / num_loops
-            lbse = sum(lbse) / num_loops
-            
-            n_model = {'n_estimator': n_size, 'max_depth': best_param['max_depth'], 'max_leaf_node': best_param['max_leaf_nodes'] , 'criterion':best_param['criterion'], 
-                    'min_samples_leaf':best_param['min_samples_leaf'], 'splitter':best_param['splitter'], 'average kfold score': avg,
-                    'MSE': lmse, 'baseline MSE': lbse, 'accuracy': f1_stats[0],
-                    "macro avg f1": f1_stats[1], "macro avg precision": f1_stats[2], "macro avg recall": f1_stats[3],
-                    "baseline accuracy": baseline_stats[0], "baseline f1": baseline_stats[1], "baseline precision": baseline_stats[2],
-                    "baseline recall": baseline_stats[3]}
-            print(n_model)
-            # print(forest)
+                num_loops = 20
+                for three in range (0, num_loops):
+                    dev_preds = MakePredictions(forest, dev_set)
+                    lmse.append(LabeledMSE(dev_preds, y_dev))
+                    lbse.append(baseline)
+                    temp_f1_stats = ClassificationEvalStats(dev_preds, y_dev)
+                    for t_f1 in range(0, len(temp_f1_stats)):
+                        f1_stats[t_f1] += temp_f1_stats[t_f1] / num_loops
 
-            all_models = all_models.append(n_model, ignore_index=True)
-            model_list.append(forest)
+                lmse = sum(lmse) / num_loops
+                lbse = sum(lbse) / num_loops
+                
+                n_model = {'n_estimator': n_size, 'max_depth': best_param['max_depth'], 'max_leaf_node': best_param['max_leaf_nodes'] , 'criterion':best_param['criterion'], 
+                        'min_samples_leaf':best_param['min_samples_leaf'], 'splitter':best_param['splitter'], 'average kfold score': avg,
+                        'MSE': lmse, 'baseline MSE': lbse, 'accuracy': f1_stats[0],
+                        "macro avg f1": f1_stats[1], "macro avg precision": f1_stats[2], "macro avg recall": f1_stats[3],
+                        "baseline accuracy": baseline_stats[0], "baseline f1": baseline_stats[1], "baseline precision": baseline_stats[2],
+                        "baseline recall": baseline_stats[3]}
+                print(n_model)
+                # print(forest)
+
+                all_models = all_models.append(n_model, ignore_index=True)
+                forest_model_list.append(forest)
 
     ts = (f"data/tune/{stock_name}_tune_data.csv")
     all_models.to_csv(ts)
     
     # # Returning best forest here.. will need but will mute for now. Check out the csv to look at the best tree result
-    # index, score = ChoseBest(stock_name)
-    # return model_list[index], score
+    index, score = ChoseBest(stock_name)
+    return forest_model_list[index], score
 
 
 
@@ -541,7 +548,8 @@ if __name__ == "__main__":
         # print(forest)
         
         tunecount = input("How many tuning cycle do you want? ")
-        Tune(train_set, dev_set, forest, int(tunecount))
-
+        bestforest, score = Tune(train_set, dev_set, forest, int(tunecount), stock_name)
+        print(f'\nBest hyperparameter: {bestforest}')
+        print(f'\nBest score: {score}')
 
 
