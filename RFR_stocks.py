@@ -155,7 +155,7 @@ def ChoseBest(stock_name):
                 \nmax_depth: {tunedata.iloc[min_value_index, 2]} \
                     \nmax_leaf_node: {tunedata.iloc[min_value_index, 3]} \
                         \ncriterion: {tunedata.iloc[min_value_index, 4]} \
-                            \min_samples_leaf: {tunedata.iloc[min_value_index, 5]} \
+                            \nmin_samples_leaf: {tunedata.iloc[min_value_index, 5]} \
                                 \nsplitter: {tunedata.iloc[min_value_index, 6]}')
     
     return min_value_index, min_value, {tunedata.iloc[min_value_index, 1]}
