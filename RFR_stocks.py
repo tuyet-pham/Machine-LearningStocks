@@ -52,6 +52,7 @@ GettingTechStocks("data/listall.csv")
     
 
 
+
 def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
 
     ts = (r"data/train/" + stock_name + "_train_data.csv")
@@ -282,6 +283,30 @@ def Tune(train_set, dev_set, oldforest, tune_cycle, stock_name):
 
 
 
+def Test(forest, stock_name):
+    
+    custom = custom_features()
+    custom.to_csv(f"data/test/{stock_name}_testcustom_data.csv")
+    
+    test_set = pd.read_csv(f"data/test/{stock_name}_testcustom_data.csv", index_col="date")
+    test_set['target %'] = GenerateLabels(test_set['target %'])
+    # print(test_set)
+    # test_set.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)
+    y_test = test_set[['target %']].values.ravel()
+
+    test_preds = MakePredictions(forest, test_set)
+    
+    print(f"Testing model.. {forest[1].get_params()}\n")
+    print(f"Predictions from model..\n")
+
+    for i in range(0, len(test_preds)):
+        print("pred: {}   actual: {}".format(test_preds[i], y_test[i]))
+    
+    print("Labeled MSE: ", end="")
+    print(LabeledMSE(test_preds, y_test))
+
+    
+
 
 # build custom_features dataframe for a single stock
 def custom_features(stock_input=None):
@@ -292,7 +317,7 @@ def custom_features(stock_input=None):
     else:
         file_name = "data/individual_stocks_5yr/" + stock_input + "_data.csv"
     print(file_name)
-
+    
     stock_data = pd.read_csv(file_name, index_col="date")
     feature_names = ["target %", "close-open %", "2 week movement", "1 week movement", "Stochastic Oscillator", "Williams %R", "average", "volatility 2w", "volatility 1w"]
 
@@ -525,8 +550,8 @@ CUTOFF = 0.75
 if __name__ == "__main__":
     stock_name = pick_stock()
     if stock_name != "":
-        ts = (r"data/train/" + stock_name + "_train_data.csv")
-        ds = (r"data/dev/" + stock_name + "_dev_data.csv")
+        ts = (f"data/train/{stock_name}_train_data.csv")
+        ds = (f"data/dev/{stock_name}_dev_data.csv")
         # noinspection PyBroadException
         try:
             train_set = pd.read_csv(ts, index_col="date")
@@ -564,11 +589,21 @@ if __name__ == "__main__":
 
         # print(forest)
         
-        tunecount = input("How many tuning cycle do you want? ")
-        bestforest, score, n_estimator = Tune(train_set, dev_set, forest, int(tunecount), stock_name)
-        print(f'\nBest hyperparameter: {bestforest}')
-        print(f'\nBest score: {score}')
-        print(f'\nBest n_estimator: {n_estimator}')
+        # tunecount = input("How many tuning cycle do you want? ")
+        # bestforest, score, n_estimator = Tune(train_set, dev_set, forest, int(tunecount), stock_name)
+        # print(f'\nBest hyperparameter: {bestforest}')
+        # print(f'\nBest score: {score}')
+        # print(f'\nBest n_estimator: {n_estimator}')
 
+        best_param = {'criterion': 'entropy', 'max_depth': 6, 'max_leaf_nodes': 10, 'min_samples_leaf': 5, 'splitter': 'random'}
+        n_estimator = 40
+        
+        random_subsets = RandomSubsets(train_set, n_estimator, 0.4)
+        forest = RandomForest(random_subsets, best_param)
+        for tree in forest:
+            X_dev = dev_set.copy()
+            X_dev.drop(columns=COLUMNS_TO_DROP, axis=1,inplace=True)
+            tree.fit(X_dev, dev_target)
 
+        Test(forest, stock_name)
 
