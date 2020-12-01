@@ -490,7 +490,7 @@ def GenerateLabels(data):
 def NumericalLabelScore(data):
     results = []
     for i in range(0, len(data)):
-        results.append(1 if data[i] == "buy" else 0 if data[i] == "hold" else -1)
+        results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
     return results
 
 
@@ -520,7 +520,7 @@ dev_set = pd.DataFrame()
 # unhelpful columns
 COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'low', 'close', 'high', 'average']
 # cutoff between buy, sell, hold
-CUTOFF = 0.75
+CUTOFF = 0.5
 
 if __name__ == "__main__":
     stock_name = pick_stock()
@@ -547,28 +547,32 @@ if __name__ == "__main__":
         train_target = train_set['target %']
         dev_target = dev_set['target %']
 
+        best_param = {'criterion': 'entropy', 'max_depth': 6, 'max_leaf_nodes': 10, 'min_samples_leaf': 5, 'splitter': 'random'}
         random_subsets = RandomSubsets(train_set, 40, 0.4)
-        forest = RandomForest(random_subsets, tree_params=None)
+        forest = RandomForest(random_subsets, tree_params=best_param)
         
         dev_preds = MakePredictions(forest, dev_set)
 
         ClassificationEvalStats(dev_preds, dev_target)
 
-        # for i in range(0, len(dev_preds)):
-        #     print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
-        
+        sum = 0
+        for i in range(0, len(dev_preds)):
+            print("pred: {}   actual: {}".format(dev_preds[i], dev_target[i]))
+            if dev_preds[i] == dev_target[i]:
+                sum += 1
+        print("Accuracy: {}".format(sum / len(dev_preds)))
         print("Labeled MSE: ", end="")
         print(LabeledMSE(dev_preds, dev_target))
         print("Labeled baseline:  ", end="")
         print(Baseline(train_set, train_target, dev_set, dev_target)[0])
 
-        # print(forest)
+'''        # print(forest)
         
         tunecount = input("How many tuning cycle do you want? ")
         bestforest, score, n_estimator = Tune(train_set, dev_set, forest, int(tunecount), stock_name)
         print(f'\nBest hyperparameter: {bestforest}')
         print(f'\nBest score: {score}')
-        print(f'\nBest n_estimator: {n_estimator}')
+        print(f'\nBest n_estimator: {n_estimator}')'''
 
 
 
