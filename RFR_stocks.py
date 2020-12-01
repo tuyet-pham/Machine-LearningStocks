@@ -523,7 +523,7 @@ def GenerateLabels(data):
 def NumericalLabelScore(data):
     results = []
     for i in range(0, len(data)):
-        results.append(1 if data[i] == "buy" else 0 if data[i] == "hold" else -1)
+        results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
     return results
 
 
