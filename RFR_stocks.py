@@ -299,7 +299,7 @@ def Test(forest, stock_name):
     test_set = pd.read_csv(f"data/test/{stock_name}_testcustom_data.csv", index_col="date")
     test_set['target %'] = GenerateLabels(test_set['target %'])
     # print(test_set)
-    # test_set.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)
+    #test_set.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)
     y_test = test_set[['target %']].values.ravel()
 
     test_preds = MakePredictions(forest, test_set)
@@ -553,7 +553,7 @@ dev_set = pd.DataFrame()
 # unhelpful columns
 COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'low', 'close', 'high', 'average']
 # cutoff between buy, sell, hold
-CUTOFF = 0.75
+CUTOFF = 0.25
 
 if __name__ == "__main__":
     stock_name = pick_stock()
@@ -563,12 +563,12 @@ if __name__ == "__main__":
         # noinspection PyBroadException
 
         custom = custom_features(stock_name)
-        train_set, dev_set = train_dev(custom, dataframe=True, dont_split=True)
+        train_set, dev_set = train_dev(custom, dataframe=True, dont_split=False)
         #print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
         
         # !Important - This will create .csv file of each sets.
         # if using custom features, the fourth parameter should be true
-        train_dev_file(dev_set, train_set, stock_name, True, True)
+        #train_dev_file(dev_set, train_set, stock_name, True, True)
 
         # replacing target data with labels
         train_set['target %'] = GenerateLabels(train_set['target %'])
