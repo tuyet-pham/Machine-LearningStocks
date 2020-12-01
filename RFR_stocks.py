@@ -53,20 +53,22 @@ GettingTechStocks("data/listall.csv")
 
 
 
-def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
+def train_dev_file(dev_set, train_set, stock_name, custom_feat=False, just_train=False):
 
     ts = (r"data/train/" + stock_name + "_train_data.csv")
-    ds = (r"data/dev/" + stock_name + "_dev_data.csv")
+    if just_train == False:
+        ds = (r"data/dev/" + stock_name + "_dev_data.csv")
 
-    dev_set.to_csv(ds, index=custom_feat)
     train_set.to_csv(ts, index=custom_feat)
+    if just_train == False:
+        dev_set.to_csv(ds, index=custom_feat)
 
     time.sleep(.2)
     print("Train and Dev set file creation - Done")
 
 
 # Getting the a tuple from the file - train and dev set
-def train_dev(stockname, dataframe=False):
+def train_dev(stockname, dataframe=False, dont_split=False):
     """[summary]
         Getting a tuple from the file - train and dev set of a specific stock
     Args:
@@ -82,13 +84,19 @@ def train_dev(stockname, dataframe=False):
         df = pd.read_csv(filepath)
 
     # Getting within the time
-    if dataframe:
-        train_stock = df[(df.index > '2012-12-31') & (df.index < '2016-01-01')]
-        dev_stock = df[(df.index > '2015-12-31') & (df.index < '2019-01-01')]
+    if not dont_split:
+        if dataframe:
+            train_stock = df[(df.index > '2012-12-31') & (df.index < '2016-01-01')]
+            dev_stock = df[(df.index > '2015-12-31') & (df.index < '2019-01-01')]
+        else:
+            train_stock = df[(df['date'] > '2012-12-31') & (df['date'] < '2016-01-01')]
+            dev_stock = df[(df['date'] > '2015-12-31') & (df['date'] < '2019-01-01')]
     else:
-        train_stock = df[(df['date'] > '2012-12-31') & (df['date'] < '2016-01-01')]
-        dev_stock = df[(df['date'] > '2015-12-31') & (df['date'] < '2019-01-01')]
-
+        if dataframe:
+            train_stock = df[(df.index > '2012-12-31') & (df.index < '2019-01-01')]
+        else:
+            train_stock = df[(df['date'] > '2012-12-31') & (df['date'] < '2019-01-01')]
+        dev_stock = None
     time.sleep(.2)
     print("Train and Dev set creation - Done")
     return train_stock, dev_stock
@@ -553,26 +561,21 @@ if __name__ == "__main__":
         ts = (f"data/train/{stock_name}_train_data.csv")
         ds = (f"data/dev/{stock_name}_dev_data.csv")
         # noinspection PyBroadException
-        try:
-            train_set = pd.read_csv(ts, index_col="date")
-            dev_set = pd.read_csv(ds, index_col="date")
-        except FileNotFoundError:
-            custom = custom_features(stock_name)
-            train_set, dev_set = train_dev(custom, dataframe=True)
+
+        custom = custom_features(stock_name)
+        train_set, dev_set = train_dev(custom, dataframe=True, dont_split=True)
         #print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
         
         # !Important - This will create .csv file of each sets.
         # if using custom features, the fourth parameter should be true
-        train_dev_file(dev_set, train_set, stock_name, True)
+        train_dev_file(dev_set, train_set, stock_name, True, True)
 
         # replacing target data with labels
         train_set['target %'] = GenerateLabels(train_set['target %'])
-        dev_set['target %'] = GenerateLabels(dev_set['target %'])
 
         train_target = train_set['target %']
-        dev_target = dev_set['target %']
 
-        random_subsets = RandomSubsets(train_set, 40, 0.4)
+        '''random_subsets = RandomSubsets(train_set, 40, 0.4)
         forest = RandomForest(random_subsets, tree_params=None)
         
         dev_preds = MakePredictions(forest, dev_set)
@@ -593,17 +596,19 @@ if __name__ == "__main__":
         # bestforest, score, n_estimator = Tune(train_set, dev_set, forest, int(tunecount), stock_name)
         # print(f'\nBest hyperparameter: {bestforest}')
         # print(f'\nBest score: {score}')
-        # print(f'\nBest n_estimator: {n_estimator}')
+        # print(f'\nBest n_estimator: {n_estimator}')'''
 
         best_param = {'criterion': 'entropy', 'max_depth': 6, 'max_leaf_nodes': 10, 'min_samples_leaf': 5, 'splitter': 'random'}
         n_estimator = 40
         
         random_subsets = RandomSubsets(train_set, n_estimator, 0.4)
         forest = RandomForest(random_subsets, best_param)
-        for tree in forest:
+
+
+        '''for tree in forest:
             X_dev = dev_set.copy()
             X_dev.drop(columns=COLUMNS_TO_DROP, axis=1,inplace=True)
-            tree.fit(X_dev, dev_target)
+            tree.fit(X_dev, dev_target)'''
 
         Test(forest, stock_name)
 
