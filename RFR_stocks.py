@@ -161,11 +161,12 @@ def ChoseBest(stock_name):
     print(f'\nIndex: {min_value_index} \
         \nMinimum Labeled MSE: {min_value} \
             \nn_estimator: {tunedata.iloc[min_value_index, 1]} \
-                \nmax_depth: {tunedata.iloc[min_value_index, 2]} \
-                    \nmax_leaf_node: {tunedata.iloc[min_value_index, 3]} \
-                        \ncriterion: {tunedata.iloc[min_value_index, 4]} \
-                            \nmin_samples_leaf: {tunedata.iloc[min_value_index, 5]} \
-                                \nsplitter: {tunedata.iloc[min_value_index, 6]}')
+                \ncutoff: {tunedata.iloc[min_value_index, 2]} \
+                    \nmax_depth: {tunedata.iloc[min_value_index, 3]} \
+                        \nmax_leaf_node: {tunedata.iloc[min_value_index, 4]} \
+                            \ncriterion: {tunedata.iloc[min_value_index, 5]} \
+                                \nmin_samples_leaf: {tunedata.iloc[min_value_index, 6]} \
+                                    \nsplitter: {tunedata.iloc[min_value_index, 7]}')
     
     return min_value_index, min_value, {tunedata.iloc[min_value_index, 1]}
 
@@ -291,7 +292,7 @@ def Tune(train_set, dev_set, oldforest, tune_cycle, stock_name):
 
 
 
-def Test(forest, stock_name):
+def Test(forest, stock_name, train_set, train_target):
     
     custom = custom_features()
     custom.to_csv(f"data/test/{stock_name}_testcustom_data.csv")
@@ -307,11 +308,19 @@ def Test(forest, stock_name):
     print(f"Testing model.. {forest[1].get_params()}\n")
     print(f"Predictions from model..\n")
 
+    correct = 0
+    baseline = Baseline(train_set, train_target, test_set, y_test)
+    baseline = baseline[0]
     for i in range(0, len(test_preds)):
+        if test_preds[i] == y_test[i]:
+            correct += 1
         print("pred: {}   actual: {}".format(test_preds[i], y_test[i]))
-    
+    correct = correct / len(test_preds)
+    print("Accuracy: {}".format(correct))
     print("Labeled MSE: ", end="")
     print(LabeledMSE(test_preds, y_test))
+    print("Baseline MSE: ", end="")
+    print(baseline)
 
     
 
@@ -553,7 +562,7 @@ dev_set = pd.DataFrame()
 # unhelpful columns
 COLUMNS_TO_DROP = ['target %', 'Name', 'open', 'low', 'close', 'high', 'average']
 # cutoff between buy, sell, hold
-CUTOFF = 0.25
+CUTOFF = 0.5
 
 if __name__ == "__main__":
     stock_name = pick_stock()
@@ -563,7 +572,7 @@ if __name__ == "__main__":
         # noinspection PyBroadException
 
         custom = custom_features(stock_name)
-        train_set, dev_set = train_dev(custom, dataframe=True, dont_split=False)
+        train_set, dev_set = train_dev(custom, dataframe=True)
         #print("\nTraining set\n", train_set, "\n\nDevset\n", dev_set)
         
         # !Important - This will create .csv file of each sets.
@@ -598,8 +607,8 @@ if __name__ == "__main__":
         # print(f'\nBest score: {score}')
         # print(f'\nBest n_estimator: {n_estimator}')'''
 
-        best_param = {'criterion': 'entropy', 'max_depth': 6, 'max_leaf_nodes': 10, 'min_samples_leaf': 5, 'splitter': 'random'}
-        n_estimator = 40
+        best_param = {'criterion': 'entropy', 'max_depth': 7, 'max_leaf_nodes': 12, 'min_samples_leaf': 4, 'splitter': 'random'}
+        n_estimator = 23
         
         random_subsets = RandomSubsets(train_set, n_estimator, 0.4)
         forest = RandomForest(random_subsets, best_param)
@@ -610,5 +619,5 @@ if __name__ == "__main__":
             X_dev.drop(columns=COLUMNS_TO_DROP, axis=1,inplace=True)
             tree.fit(X_dev, dev_target)'''
 
-        Test(forest, stock_name)
+        Test(forest, stock_name, train_set, train_target)
 
