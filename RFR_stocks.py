@@ -9,51 +9,61 @@ from concurrent.futures import ThreadPoolExecutor
 pd.options.display.max_rows = 20
 
 
-# To get the list of Name values from the 'Name' column from the
+# Here we are trying to get the names of the stocks 
+# from the large datafile from kaggle.
+# https://www.kaggle.com/camnugent/sandp500
 alst = pd.read_csv("data/all_stocks_5yr.csv")
 alst = alst['Name'].unique()
 
-# create and open the listall.csv
 file1 = open("data/listall.csv", "wt")
-
-# Column header
 file1.writelines("Name\n")
-
-# Write the Name of stocks
 for e in alst:
     file1.writelines(e + "\n")
 file1.close()
 
-
-# Remove all but tech stocks.
-def GettingTechStocks(pathname):
     
-    filall = pd.read_csv(pathname)
-    filetech = pd.DataFrame()
+
+def GettingTechStocks(pathname):
+    """ 
+    @desc:
+        Creates 'listTech.csv' that has only the company within the tech sector. 
+        It also creates the isin_listall column
+    @params:
+        pathname:string - the file that has all the s&p500 names
+    """
     
     LISTOFTECH = ['AAPL', 'ACN', 'ADBE', 'ADI', 'ADP', 'ADSK', 'AKAM', 'AMAT', 'AMD',
         'ANET', 'ANSS', 'APH', 'AVGO', 'BR', 'CDNS', 'CDW', 'CRM', 'CSCO', 'CTSH', 'CTXS', 'DXC', 'FFIV',
             'FIS', 'FISV', 'FLIR', 'FLT', 'FTNT', 'GLW', 'GPN', 'HPE', 'HPQ', 'IBM', 'INTC', 'INTU', 'IPGP', 'IT',
                 'JKHY', 'JNPR', 'KEYS', 'KLAC', 'LDOS', 'LRCX', 'MA', 'MCHP', 'MSFT', 'MSI', 'MU', 'MXIM', 'NLOK', 'NOW', 'NTAP', 'NVDA', 'ORCL',
-                    'PAYC', 'PAYX', 'PYPL', 'QCOM', 'QRVO', 'SNPS', 'STX', 'SWKS', 'TEL', 'TER', 'TXN', 'TYL', 'V', 'VNT', 'VRSN', 'WDC', 'WU', 'XLNX', 'XRX', 'ZBRA']
+                    'PAYC', 'PAYX', 'PYPL', 'QCOM', 'QRVO', 'SNPS', 'STX', 'SWKS', 'TEL', 'TER', 'TXN', 'TYL', 'V', 'VNT', 'VRSN', 'WDC', 'WU', 'XLNX', 
+                        'XRX', 'ZBRA']
     
+    
+    fileall = pd.read_csv(pathname)
+    filetech = pd.DataFrame()
     filetech["Name"] = LISTOFTECH
-    filetech.to_csv("data/listTech.csv", index=False)
-
-    # open the listall.csv and compare
-    onlytech = filetech['Name'].isin(filall['Name'])
     
+    # open the listall.csv and compare to add the column isin_listall
+    onlytech = filetech['Name'].isin(fileall['Name'])
     filetech["isin_listall"] = onlytech
     filetech.to_csv("data/listTech.csv", index=False)
 
-    # print(file2)
 
-#Getting the csv for Techstocks only and seeing if it exists in our current listall
 GettingTechStocks("data/listall.csv")
     
 
 
 def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
+    """
+    @desc:
+        Makes csv files and add custom features
+    @params:
+        dev_set:dataframe
+        train_set:dataframe
+        stock_name:string
+        custom_feat:bool
+    """
 
     ts = (r"data/train/" + stock_name + "_train_data.csv")
     ds = (r"data/dev/" + stock_name + "_dev_data.csv")
@@ -65,15 +75,18 @@ def train_dev_file(dev_set, train_set, stock_name, custom_feat=False):
     print("Train and Dev set file creation - Done")
 
 
-# Getting the a tuple from the file - train and dev set
 def train_dev(stockname, dataframe=False):
-    """[summary]
-        Getting a tuple from the file - train and dev set of a specific stock
-    Args:
-        stockname (string):
-    Returns:
-        [tuples]: train_stock, dev_stock
+    """ 
+    @desc:
+        Getting the a tuple from the file - train and dev set
+    @params:
+        stockname:string
+        dataframe:bool
+    @rets:
+        train_stock:dataframe
+        dev_stock:dataframe 
     """
+    
     if dataframe:
         df = stockname
     else:
@@ -81,7 +94,6 @@ def train_dev(stockname, dataframe=False):
         filepath = 'data/individual_stocks_5yr/' + stockname + '_data.csv'
         df = pd.read_csv(filepath)
 
-    # Getting within the time
     if dataframe:
         train_stock = df[(df.index > '2012-12-31') & (df.index < '2016-01-01')]
         dev_stock = df[(df.index > '2015-12-31') & (df.index < '2019-01-01')]
@@ -94,42 +106,32 @@ def train_dev(stockname, dataframe=False):
     return train_stock, dev_stock
 
 
-
-# Picking an individual stock
 def pick_stock():
+    """ 
+    @desc:
+        Picking an individual stock
+    @rets:
+        stkname:string
+    """
         
-    # Open listall
     try:
+        # Make sure we have these two files
         file1 = pd.read_csv('data/listall.csv')
-    except FileExistsError:
-        print('\nFile doesnt exist.')
-        return ""
-
-    # Open listall
-    try:
         file2 = pd.read_csv('data/listTech.csv')
     except FileExistsError:
-        print('\nFile doesnt exist.')
+        print('\nA file doesnt exist, either listall or listTech')
         return ""
 
-    """[summary]
-        Make the user pick a correct stock
-    Returns:
-        [string] - stkname: Good name of file
-    """
     found = False
     stkname = ""
 
     # Get a good name before continuing
     while found == False:
         stkname = input("Enter stock name or QUIT: ").upper()
-
         if stkname == "QUIT":
             return ""
-
         if (file2['Name'] == stkname).any() and (file1['Name'] == stkname).any():
             return stkname
-
         print("Can't find %s Try again?" % stkname)
 
     return ""
@@ -138,8 +140,18 @@ def pick_stock():
 def Average(lst): 
     return sum(lst) / len(lst)
 
-
 def ChoseBest(stock_name):
+    """ 
+    @desc:
+        Chose the best tree depending on the least mean square value.
+    @params:
+        stock_name:string
+    @rets:
+        min_value_index:int - The index of the best tree in the tune folder under corresponding filename 
+        min_value:float - The least MSE score
+        {tunedata.iloc[min_value_index, 1]}:int - The corresponding n_estimator
+    """
+    
     try:
         tunedata = pd.read_csv(f'data/tune/{stock_name}_tune_data.csv')
     except FileExistsError:
@@ -164,7 +176,21 @@ def ChoseBest(stock_name):
 
 # Tuning 
 def Tune(train_set, dev_set, oldforest, tune_cycle, stock_name, train_target_set, dev_target_set):
-
+    """ 
+    @desc:
+        Tuning the Random forest 
+    @params:
+        train_set,dev_set,train_target_set,dev_target_set:dataframe
+        oldforest:list
+        tune_cycle:int
+        stock_name:string
+    @rets:
+        forest:list - The best forest 
+        score:float
+        n_estim:int - The best subset amount
+    """
+    
+    
     # Forest Param 
     n_estimator = [5,10,13,15,20,21,23,25,27,30,40,45,55,60,65,70,80,90,100]
 
@@ -186,10 +212,7 @@ def Tune(train_set, dev_set, oldforest, tune_cycle, stock_name, train_target_set
     X_dev.drop(columns=COLUMNS_TO_DROP, axis=1, inplace=True)
     y_dev = dev_set[['target %']].values.ravel()
 
-    # print(f'X_train: \n\n{X_train}\ny_train:\n\n{y_train}')
-    # print(f'X_dev: \n\n{X_dev}\ny_dev:\n\n{y_dev}')
 
-    
     # Get best tree model
     kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     all_models = pd.DataFrame(data=None, columns=['n_estimator', 'cutoff', 'max_depth', 'max_leaf_nodes','criterion','min_samples_leaf','splitter','average kfold score', 'MSE', 'baseline MSE',
@@ -281,21 +304,26 @@ def Tune(train_set, dev_set, oldforest, tune_cycle, stock_name, train_target_set
                 forest_model_list.append(forest)
 
 
-
     ts = (f"data/tune/{stock_name}_tune_data.csv")
     all_models.to_csv(ts)
     
-    # # Returning best forest here.. will need but will mute for now. Check out the csv to look at the best tree result
     index, score, n_estim = ChoseBest(stock_name)
     return forest_model_list[index], score, n_estim
 
 
 
 
-# build custom_features dataframe for a single stock
 def custom_features(stock_input=None):
+    """ 
+    @desc:
+        Build custom_features dataframe for a single stock
+    @params:
+        stock_input:string:defult=None - the filename or the path/to/the/file.csv
+        
+    @rets:
+        custom_features:dataFrame
+    """
 
-    # file_name = "data/individual_stocks_5yr/AAPL_data.csv"
     if not stock_input:
         file_name = input("enter stock file name (individual stock): ")
     else:
@@ -374,7 +402,19 @@ def custom_features(stock_input=None):
     return custom_features
 
 
+
 def RandomForest(train_sets, tree_params):
+    """ 
+    @desc:
+        Builds random forest with tree.DecisionTreeClassifier, if param none a basic
+        forest will be built
+    @params:
+        train_sets:dataframe
+        tree_params:parameters for tree
+    @rets:
+        forest:list - list of n DecisionTreeClassifier
+    """
+    
     forest = []
     random.seed(dt.datetime.now().microsecond)
     if tree_params == None:
@@ -399,6 +439,17 @@ def RandomForest(train_sets, tree_params):
 
 
 def MakePredictions(forest, set):
+    """ 
+    @desc:
+        desc
+    @params:
+        arg1:type - 
+        arg2:type -
+    @rets:
+        arg1:type - 
+        arg2:type - 
+    """
+    
     set = set.drop(columns=COLUMNS_TO_DROP)
     pred_set = []
     final_preds = []
@@ -420,6 +471,17 @@ def MakePredictions(forest, set):
 
 
 def RandomSubsets(data: pd.DataFrame, n_subsets: int, frac_of_set: float):
+    """ 
+    @desc:
+        Create random subsets of training set given # of subset
+    @params:
+        data:dataframe
+        n_subsets:int
+        frac_of_set:float
+    @rets:
+        subsets:list
+    """
+    
     random.seed(dt.datetime.now().microsecond)
     subsets = []
     for i in range(0, n_subsets):
@@ -430,6 +492,17 @@ def RandomSubsets(data: pd.DataFrame, n_subsets: int, frac_of_set: float):
 
 
 def GetMSE(preds, target):
+    """ 
+    @desc:
+        desc
+    @params:
+        arg1:type - 
+        arg2:type -
+    @rets:
+        arg1:type - 
+        arg2:type - 
+    """
+    
     sum_ = 0
     n = len(preds)
     if n != len(target):
@@ -440,6 +513,17 @@ def GetMSE(preds, target):
 
 
 def ClassificationEvalStats(preds, target):
+    """ 
+    @desc:
+        desc
+    @params:
+        arg1:type - 
+        arg2:type -
+    @rets:
+        arg1:type - 
+        arg2:type - 
+    """
+    
     if len(preds) != len(target):
         return
     correct = 0
@@ -487,7 +571,19 @@ def ClassificationEvalStats(preds, target):
     return accuracy, macro_f1, macro_precision, macro_recall
 
 
+
 def GenerateLabels(data, cutoff=None):
+    """ 
+    @desc:
+        desc
+    @params:
+        arg1:type - 
+        arg2:type -
+    @rets:
+        arg1:type - 
+        arg2:type - 
+    """
+    
     labels = []
     high = CUTOFF
     low = -CUTOFF
@@ -500,6 +596,17 @@ def GenerateLabels(data, cutoff=None):
 
 
 def NumericalLabelScore(data):
+    """ 
+    @desc:
+        desc
+    @params:
+        arg1:type - 
+        arg2:type -
+    @rets:
+        arg1:type - 
+        arg2:type - 
+    """
+    
     results = []
     for i in range(0, len(data)):
         results.append(1 if data[i] == "buy " else 0 if data[i] == "hold" else -1)
@@ -511,6 +618,17 @@ def LabeledMSE(preds, target):
 
 
 def Baseline(train_set, train_target, dev_set, dev_target):
+    """ 
+    @desc:
+        desc
+    @params:
+        arg1:type - 
+        arg2:type -
+    @rets:
+        arg1:type - 
+        arg2:type - 
+    """
+    
     base = DecisionTreeClassifier()
     train_set = train_set.drop(columns=COLUMNS_TO_DROP)
     dev_set = dev_set.drop(columns=COLUMNS_TO_DROP)
@@ -571,7 +689,6 @@ if __name__ == "__main__":
         forest = RandomForest(random_subsets, tree_params=best_param)
         
         dev_preds = MakePredictions(forest, dev_set)
-
         ClassificationEvalStats(dev_preds, dev_target)
 
         sum_ = 0
