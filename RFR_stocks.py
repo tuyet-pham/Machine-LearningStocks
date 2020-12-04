@@ -236,12 +236,12 @@ def Tune(train_set, dev_set, oldforest, tune_cycle, stock_name, train_target_set
 
             def grid_search():
                 decisionTree = DecisionTreeClassifier()
-                decisionTree.fit(X_train, y_train)
+                decisionTree.fit(X_train, train_target)
                 grid = GridSearchCV(decisionTree,
                                     param_grid=param_dict_tree,
                                     cv=kf,
                                     scoring='accuracy')
-                grid.fit(X_train, y_train)
+                grid.fit(X_train, train_target)
                 best_param = grid.best_params_
                 tree_model_list.append(best_param)
 
@@ -672,7 +672,7 @@ if __name__ == "__main__":
 
         train_target_set = {}
         dev_target_set = {}
-        for cutoff in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:
+        for cutoff in [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:
             train_target_set[cutoff] = (GenerateLabels(train_set['target %'], cutoff))
             dev_target_set[cutoff] = (GenerateLabels(dev_set['target %'], cutoff))
 
